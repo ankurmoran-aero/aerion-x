@@ -175,8 +175,26 @@ def get_brahmos_response(messages):
     except Exception as e:
         return {"role": "assistant", "content": f"BrahMos API Error: {str(e)}"}
 
-def load_session():
-    session_file = os.path.expanduser("~/.brahmos_sessions.json")
+SESSION_DIR = os.path.expanduser("~/.brahmos/sessions")
+
+def migrate_legacy_session():
+    legacy_file = os.path.expanduser("~/.brahmos_sessions.json")
+    if os.path.exists(legacy_file):
+        os.makedirs(SESSION_DIR, exist_ok=True)
+        new_file = os.path.join(SESSION_DIR, "legacy_session.json")
+        if not os.path.exists(new_file):
+            shutil.move(legacy_file, new_file)
+
+def list_sessions():
+    migrate_legacy_session()
+    if not os.path.exists(SESSION_DIR):
+        return []
+    files = [f for f in os.listdir(SESSION_DIR) if f.endswith(".json")]
+    files.sort(key=lambda x: os.path.getmtime(os.path.join(SESSION_DIR, x)), reverse=True)
+    return [f.replace(".json", "") for f in files]
+
+def load_session(session_id):
+    session_file = os.path.join(SESSION_DIR, f"{session_id}.json")
     if os.path.exists(session_file):
         try:
             with open(session_file, 'r') as f:
@@ -185,8 +203,9 @@ def load_session():
             log_error(f"Failed to load session: {e}")
     return None
 
-def save_session(messages):
-    session_file = os.path.expanduser("~/.brahmos_sessions.json")
+def save_session(session_id, messages):
+    os.makedirs(SESSION_DIR, exist_ok=True)
+    session_file = os.path.join(SESSION_DIR, f"{session_id}.json")
     try:
         with open(session_file, 'w') as f:
             json.dump(messages, f, indent=4)
@@ -203,18 +222,25 @@ def main():
     
     messages = [{"role": "system", "content": f"{SYSTEM_PROMPT}\nENV: {os_info}"}]
     
-    previous_session = load_session()
-    if previous_session and len(previous_session) > 1:
-        console.print(f" [purple]├─[/purple] [white]Session:[/white] [green]Previous session found.[/green]")
-        console.print(f" [purple]└─[/purple] [white]Status:[/white] [bold magenta]Active & Awaiting Directives[/bold magenta]\n")
-        
-        prompt = f"\n[bold cyan]?[/bold cyan] Would you like to resume your previous session? (Y/n): "
-        choice = console.input(prompt).strip().lower()
-        if choice in ['', 'y', 'yes']:
-            messages = previous_session
-            console.print("[dim]Session restored.[/dim]\n")
-        else:
-            console.print("[dim]Starting a fresh session.[/dim]\n")
+    migrate_legacy_session()
+    sessions = list_sessions()
+    current_session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    if sessions:
+        latest_session_id = sessions[0]
+        previous_session = load_session(latest_session_id)
+        if previous_session and len(previous_session) > 1:
+            console.print(f" [purple]├─[/purple] [white]Session:[/white] [green]Previous session found ({latest_session_id}).[/green]")
+            console.print(f" [purple]└─[/purple] [white]Status:[/white] [bold magenta]Active & Awaiting Directives[/bold magenta]\n")
+            
+            prompt = f"\n[bold cyan]?[/bold cyan] Would you like to resume your previous session? (Y/n): "
+            choice = console.input(prompt).strip().lower()
+            if choice in ['', 'y', 'yes']:
+                messages = previous_session
+                current_session_id = latest_session_id
+                console.print("[dim]Session restored.[/dim]\n")
+            else:
+                console.print(f"[dim]Starting a fresh session ({current_session_id}).[/dim]\n")
     else:
         console.print(f" [purple]└─[/purple] [white]Status:[/white] [bold magenta]Active & Awaiting Directives[/bold magenta]\n")
     
@@ -254,10 +280,43 @@ def main():
                 table.add_row("/cd [path]", "Change the AI's working directory")
                 table.add_row("/shell", "Drop into an interactive shell inside the current directory")
                 table.add_row("/history", "View conversation history")
+                table.add_row("/resume", "View and resume previous sessions")
                 table.add_row("clear", "Clear the terminal screen")
                 table.add_row("exit / quit", "Shutdown BrahMos")
                 
                 console.print(table)
+                continue
+                
+            if user_input.lower() in ["/resume", "resume"]:
+                sessions = list_sessions()
+                if not sessions:
+                    console.print("[bold red]No previous sessions found.[/bold red]")
+                    continue
+                
+                from rich.table import Table
+                table = Table(title="Previous Sessions", border_style="cyan")
+                table.add_column("ID", style="cyan", justify="right")
+                table.add_column("Session Name", style="white")
+                table.add_column("Last Modified", style="dim")
+                
+                for i, sess in enumerate(sessions):
+                    mtime = os.path.getmtime(os.path.join(SESSION_DIR, f"{sess}.json"))
+                    mtime_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+                    table.add_row(str(i+1), sess, mtime_str)
+                
+                console.print(table)
+                choice = console.input("\n[bold cyan]?[/bold cyan] Enter the ID of the session to resume (or press Enter to cancel): ")
+                if choice.isdigit() and 1 <= int(choice) <= len(sessions):
+                    selected_session = sessions[int(choice)-1]
+                    loaded_messages = load_session(selected_session)
+                    if loaded_messages:
+                        messages = loaded_messages
+                        current_session_id = selected_session
+                        console.print(f"[bold green]✔[/bold green] [white]Switched to session: {selected_session}[/white]")
+                    else:
+                        console.print("[bold red]Failed to load the selected session.[/bold red]")
+                else:
+                    console.print("[dim]Session resume cancelled.[/dim]")
                 continue
                 
             if user_input.lower() in ["/history", "history"]:
@@ -370,7 +429,7 @@ def main():
                 if turn_count >= max_turns:
                     log_error("Maximum autonomous turns reached. Pausing for safety.")
             
-            save_session(messages)
+            save_session(current_session_id, messages)
             
         except KeyboardInterrupt:
             console.print(f"\n[bold red]Safe shutdown initiated.[/bold red]")
