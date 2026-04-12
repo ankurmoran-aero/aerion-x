@@ -175,6 +175,24 @@ def get_brahmos_response(messages):
     except Exception as e:
         return {"role": "assistant", "content": f"BrahMos API Error: {str(e)}"}
 
+def load_session():
+    session_file = os.path.expanduser("~/.brahmos_sessions.json")
+    if os.path.exists(session_file):
+        try:
+            with open(session_file, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            log_error(f"Failed to load session: {e}")
+    return None
+
+def save_session(messages):
+    session_file = os.path.expanduser("~/.brahmos_sessions.json")
+    try:
+        with open(session_file, 'w') as f:
+            json.dump(messages, f, indent=4)
+    except Exception as e:
+        log_error(f"Failed to save session: {e}")
+
 def main():
     os_info = get_os_info()
     os.makedirs("Workspace", exist_ok=True)
@@ -182,9 +200,23 @@ def main():
     print_banner()
     console.print(f" [purple]├─[/purple] [white]System:[/white] {os_info}")
     console.print(f" [purple]├─[/purple] [white]Location:[/white] {os.path.abspath(current_working_dir)}")
-    console.print(f" [purple]└─[/purple] [white]Status:[/white] [bold magenta]Active & Awaiting Directives[/bold magenta]\n")
     
     messages = [{"role": "system", "content": f"{SYSTEM_PROMPT}\nENV: {os_info}"}]
+    
+    previous_session = load_session()
+    if previous_session and len(previous_session) > 1:
+        console.print(f" [purple]├─[/purple] [white]Session:[/white] [green]Previous session found.[/green]")
+        console.print(f" [purple]└─[/purple] [white]Status:[/white] [bold magenta]Active & Awaiting Directives[/bold magenta]\n")
+        
+        prompt = f"\n[bold cyan]?[/bold cyan] Would you like to resume your previous session? (Y/n): "
+        choice = console.input(prompt).strip().lower()
+        if choice in ['', 'y', 'yes']:
+            messages = previous_session
+            console.print("[dim]Session restored.[/dim]\n")
+        else:
+            console.print("[dim]Starting a fresh session.[/dim]\n")
+    else:
+        console.print(f" [purple]└─[/purple] [white]Status:[/white] [bold magenta]Active & Awaiting Directives[/bold magenta]\n")
     
     while True:
         try:
@@ -337,6 +369,8 @@ def main():
                 
                 if turn_count >= max_turns:
                     log_error("Maximum autonomous turns reached. Pausing for safety.")
+            
+            save_session(messages)
             
         except KeyboardInterrupt:
             console.print(f"\n[bold red]Safe shutdown initiated.[/bold red]")
