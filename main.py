@@ -202,6 +202,15 @@ def main():
                     continue
                 break
                 
+            if user_input.lower() in ["import antigravity", "/antigravity"]:
+                console.print("\n[bold cyan]🚀 Initiating Anti-Gravity sequence...[/bold cyan]")
+                console.print("[dim]Flying is just learning how to throw yourself at the ground and miss.[/dim]\n")
+                try:
+                    import antigravity
+                except ImportError:
+                    pass
+                continue
+                
             if user_input.lower() in ["/help", "help"]:
                 from rich.table import Table
                 table = Table(title="BrahMos Commands", border_style="cyan")
