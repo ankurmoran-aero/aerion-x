@@ -126,11 +126,12 @@ TOOLS = {
 }
 
 # --- API Interaction ---
-
 def get_brahmos_response(messages):
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {MODEL_API_KEY}"
+        "Authorization": f"Bearer {MODEL_API_KEY}",
+        "HTTP-Referer": "https://github.com/ankurmoran96-openai/brahmos",
+        "X-Title": "BrahMos"
     }
 
     tools_config = [
@@ -214,6 +215,21 @@ def main():
                 console.print("\n[bold magenta]Returned to BrahMos. Awaiting Directives.[/bold magenta]")
                 continue
             
+            if user_input.lower().startswith("/model"):
+                parts = user_input.split(" ", 1)
+                if len(parts) > 1:
+                    new_model = parts[1].strip()
+                    global MODEL_NAME
+                    MODEL_NAME = new_model
+                    console.print(f"[bold purple]│[/bold purple] [green]Model switched to {MODEL_NAME}[/green]")
+                else:
+                    from config import AVAILABLE_MODELS
+                    console.print("[bold purple]│[/bold purple] Available models:")
+                    console.print(f"[bold purple]│[/bold purple] Free: {', '.join(AVAILABLE_MODELS['free'])}")
+                    console.print(f"[bold purple]│[/bold purple] Paid: {', '.join(AVAILABLE_MODELS['paid'])}")
+                    console.print(f"[bold purple]│[/bold purple] Current: {MODEL_NAME}")
+                continue
+
             if not user_input.strip():
                 continue
                 

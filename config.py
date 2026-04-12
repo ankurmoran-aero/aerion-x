@@ -1,16 +1,33 @@
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # BrahMos Universal CLI Configuration
 # Developer: @Ankxrrrr
 # Support: @BrahMosAI
 
 # Model / API
-MODEL_API_URL = "https://api.gptnix.online/v1/chat/completions"
-MODEL_NAME = "openai/gpt-4o"
+MODEL_API_URL = os.getenv("MODEL_API_URL", "https://openrouter.ai/api/v1/chat/completions")
+MODEL_NAME = os.getenv("MODEL_NAME", "anthropic/claude-3.5-sonnet")
+
+# Available Models (Free & Paid Tiers)
+AVAILABLE_MODELS = {
+    "free": [
+        "google/gemini-2.0-flash-exp:free",
+        "mistralai/mistral-7b-instruct:free",
+        "openrouter/auto"
+    ],
+    "paid": [
+        "anthropic/claude-3.7-sonnet",
+        "openai/gpt-4o",
+        "google/gemini-2.5-pro"
+    ]
+}
 
 # ====== SECRETS ======
-# Note: If this is pushed to GitHub, anyone can use this key!
-MODEL_API_KEY = "API_TOKRN"
+MODEL_API_KEY = os.getenv("MODEL_API_KEY", "")
 # ===============================
 
 # Branding

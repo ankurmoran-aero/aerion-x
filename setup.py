@@ -12,7 +12,8 @@ setup(
         "requests",
         "beautifulsoup4",
         "googlesearch-python",
-        "rich"
+        "rich",
+        "python-dotenv"
     ],
     entry_points={
         "console_scripts": [
