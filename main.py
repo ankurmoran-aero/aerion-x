@@ -33,7 +33,8 @@ console = Console()
 
 # Import modular tools AFTER dependencies are installed
 from tools.shell_tool import run_shell
-from tools.file_tool import list_files, read_file, write_file
+from tools.file_tool import list_files, read_file, write_file, replace_text, search_directory
+from tools.git_tool import run_git_command
 from tools.web_tool import google_search, web_browse
 from tools.plan_tool import discuss_and_plan
 from tools.input_tool import ask_user_input
@@ -45,21 +46,22 @@ from config import MODEL_API_URL, MODEL_API_KEY, MODEL_NAME, SYSTEM_PROMPT, CLI_
 def print_banner():
     os.system('clear' if os.name == 'posix' else 'cls')
     
-    logo = """[bold magenta]
+    logo = """[bold cyan]
 ██████╗ ██████╗  █████╗ ██╗  ██╗███╗   ███╗ ██████╗ ███████╗
 ██╔══██╗██╔══██╗██╔══██╗██║  ██║████╗ ████║██╔═══██╗██╔════╝
 ██████╔╝██████╔╝███████║███████║██╔████╔██║██║   ██║███████╗
 ██╔══██╗██╔══██╗██╔══██║██╔══██║██║╚██╔╝██║██║   ██║╚════██║
 ██████╔╝██║  ██║██║  ██║██║  ██║██║ ╚═╝ ██║╚██████╔╝███████║
 ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝ ╚══════╝
-[/bold magenta]"""
+[/bold cyan]"""
     
-    credits_line = f" [white]Made By Ankur Moran[/white]  |  [magenta]TG:[/magenta] [white]@Ankxrrrr[/white]  |  [magenta]IG:[/magenta] [white]_ankurmoran_[/white] "
+    credits_line = f" [white]Made By Ankur Moran[/white]  |  [cyan]TG:[/cyan] [white]@Ankxrrrr[/white]  |  [cyan]IG:[/cyan] [white]_ankurmoran_[/white] "
     version_line = f" [dim]CLI Version: {VERSION}  |  Engine: {MODEL_NAME}[/dim]"
     
+    from rich.panel import Panel
     panel = Panel(
         f"{logo}\n{credits_line}\n{version_line}",
-        border_style="purple",
+        border_style="cyan",
         expand=False,
         padding=(1, 4)
     )
@@ -72,13 +74,14 @@ def log_brahmos(msg):
     if not msg:
         return
     md = Markdown(msg, justify="left")
-    panel = Panel(md, title="[bold magenta]BrahMos[/bold magenta]", title_align="left", border_style="purple", expand=True)
+    from rich.panel import Panel
+    panel = Panel(md, title="[bold cyan]BrahMos AI[/bold cyan]", title_align="left", border_style="cyan", expand=True)
     console.print()
     console.print(panel)
     console.print()
 
 def log_tool(msg):
-    console.print(f"[bold purple]│ ⚙ TOOL:[/bold purple] [white]{msg}[/white]")
+    console.print(f"[bold blue]│ ⚙ TOOL:[/bold blue] [white]{msg}[/white]")
 
 def log_error(msg):
     console.print(f"[bold red]│ ✖ ERROR:[/bold red] [white]{msg}[/white]")
@@ -116,8 +119,11 @@ def change_directory(path):
 TOOLS = {
     "run_shell": lambda command: run_shell(command, CLI_NAME, cwd=current_working_dir),
     "list_files": lambda path=None: list_files(path if path else current_working_dir),
+    "search_directory": lambda query, path=None: search_directory(query, path if path else current_working_dir),
+    "run_git_command": lambda command: run_git_command(command, cwd=current_working_dir),
     "read_file": lambda file_path: read_file(os.path.join(current_working_dir, file_path) if not os.path.isabs(file_path) else file_path),
     "write_file": lambda file_path, content: write_file(os.path.join(current_working_dir, file_path) if not os.path.isabs(file_path) else file_path, content),
+    "replace_text": lambda file_path, old_string, new_string, allow_multiple=False: replace_text(os.path.join(current_working_dir, file_path) if not os.path.isabs(file_path) else file_path, old_string, new_string, allow_multiple),
     "change_directory": change_directory,
     "google_search": google_search,
     "web_browse": web_browse,
@@ -139,8 +145,11 @@ def get_brahmos_response(messages):
         {"type": "function", "function": {"name": "web_browse", "description": "Read content from a URL.", "parameters": {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]}}},
         {"type": "function", "function": {"name": "run_shell", "description": "Run any shell command.", "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
         {"type": "function", "function": {"name": "list_files", "description": "List directory contents.", "parameters": {"type": "object", "properties": {"path": {"type": "string", "description": "Optional path. Defaults to current working directory."}}}}},
+        {"type": "function", "function": {"name": "search_directory", "description": "Search for files by name or content.", "parameters": {"type": "object", "properties": {"query": {"type": "string", "description": "Text to search for"}, "path": {"type": "string", "description": "Optional path. Defaults to current working directory."}}, "required": ["query"]}}},
+        {"type": "function", "function": {"name": "run_git_command", "description": "Run a git command (e.g., 'status', 'add .', 'commit -m \"msg\"'). Do not include 'git' in the command.", "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
         {"type": "function", "function": {"name": "read_file", "description": "Read file contents.", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}}, "required": ["file_path"]}}},
         {"type": "function", "function": {"name": "write_file", "description": "Create/update files.", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "content": {"type": "string"}}, "required": ["file_path", "content"]}}},
+        {"type": "function", "function": {"name": "replace_text", "description": "Replace occurrences of a specific string in a file.", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "old_string": {"type": "string"}, "new_string": {"type": "string"}, "allow_multiple": {"type": "boolean"}}, "required": ["file_path", "old_string", "new_string"]}}},
         {"type": "function", "function": {"name": "change_directory", "description": "Change the current working directory for the AI. Use this when the user gives you access to a different folder.", "parameters": {"type": "object", "properties": {"path": {"type": "string", "description": "The path to change to."}}, "required": ["path"]}}},
         {"type": "function", "function": {"name": "discuss_and_plan", "description": "Enter an interactive chat with the user using gpt-4o to brainstorm and plan a project. Returns the final blueprint.", "parameters": {"type": "object", "properties": {"topic": {"type": "string", "description": "Optional initial topic to discuss"}}, "required": []}}},
         {"type": "function", "function": {"name": "ask_user_input", "description": "Ask the user for specific input, such as a missing API key, token, password, or setting. If it is a secret (like a password or token), set is_secret to true so the user's input is hidden.", "parameters": {"type": "object", "properties": {"prompt_message": {"type": "string", "description": "The question or prompt to show the user."}, "is_secret": {"type": "boolean", "description": "Set to true if asking for a password/token to hide their typing."}}, "required": ["prompt_message"]}}}
@@ -179,32 +188,62 @@ def main():
     
     while True:
         try:
-            prompt = f"\n[bold magenta]╭─ You[/bold magenta] [dim]({os.path.basename(os.path.abspath(current_working_dir))})[/dim]\n[bold magenta]╰─❯ [/bold magenta]"
+            cwd_name = os.path.basename(os.path.abspath(current_working_dir))
+            prompt = f"\n[bold cyan]╭─ You[/bold cyan] [dim]({cwd_name})[/dim]\n[bold cyan]╰─❯ [/bold cyan]"
             user_input = console.input(prompt)
             
             if user_input.lower() in ["exit", "quit", "clear"]:
                 if user_input.lower() == "clear":
                     os.system('clear')
                     print_banner()
-                    console.print(f" [purple]├─[/purple] [white]System:[/white] {os_info}")
-                    console.print(f" [purple]├─[/purple] [white]Location:[/white] {os.path.abspath(current_working_dir)}")
-                    console.print(f" [purple]└─[/purple] [white]Status:[/white] [bold magenta]Active & Awaiting Directives[/bold magenta]\n")
+                    console.print(f" [cyan]├─[/cyan] [white]System:[/white] {os_info}")
+                    console.print(f" [cyan]├─[/cyan] [white]Location:[/white] {os.path.abspath(current_working_dir)}")
+                    console.print(f" [cyan]└─[/cyan] [white]Status:[/white] [bold cyan]Active & Awaiting Directives[/bold cyan]\n")
                     continue
                 break
+                
+            if user_input.lower() in ["/help", "help"]:
+                from rich.table import Table
+                table = Table(title="BrahMos Commands", border_style="cyan")
+                table.add_column("Command", style="cyan", justify="left")
+                table.add_column("Description", style="white")
+                
+                table.add_row("/help", "Show this help message")
+                table.add_row("/model [name]", "Switch AI model or view available models")
+                table.add_row("/cd [path]", "Change the AI's working directory")
+                table.add_row("/shell", "Drop into an interactive shell inside the current directory")
+                table.add_row("/history", "View conversation history")
+                table.add_row("clear", "Clear the terminal screen")
+                table.add_row("exit / quit", "Shutdown BrahMos")
+                
+                console.print(table)
+                continue
+                
+            if user_input.lower() in ["/history", "history"]:
+                console.print("\n[bold cyan]╭─ Conversation History ─╮[/bold cyan]")
+                for msg in messages:
+                    role = msg.get("role")
+                    content = msg.get("content", "")
+                    if role == "user":
+                        console.print(f"[bold cyan]You:[/bold cyan] {content}")
+                    elif role == "assistant" and content:
+                        console.print(f"[bold cyan]BrahMos:[/bold cyan] {content[:100]}..." if len(content) > 100 else f"[bold cyan]BrahMos:[/bold cyan] {content}")
+                console.print("[bold cyan]╰────────────────────────╯[/bold cyan]\n")
+                continue
                 
             if user_input.lower().startswith("cd ") or user_input.lower().startswith("/cd "):
                 # Quick manual cd command for the user
                 new_path = user_input.split(" ", 1)[1].strip()
                 res = change_directory(new_path)
-                console.print(f"[bold purple]│[/bold purple] {res}")
+                console.print(f"[bold cyan]│[/bold cyan] {res}")
                 continue
 
             if user_input.lower() in ["/shell", "shell"]:
-                console.print("\n[bold purple]╭───────────────────────────────────────────────────╮[/bold purple]")
-                console.print(f"[bold purple]│[/bold purple] [bold white]Entering Interactive Shell...[/bold white]                     [bold purple]│[/bold purple]")
-                console.print(f"[bold purple]│[/bold purple] [white]Location: {os.path.abspath(current_working_dir)[:35]:<35}[/white] [bold purple]│[/bold purple]")
-                console.print("[bold purple]│[/bold purple] [bold white]Type 'exit' or press Ctrl+D to return to BrahMos.[/bold white] [bold purple]│[/bold purple]")
-                console.print("[bold purple]╰───────────────────────────────────────────────────╯[/bold purple]\n")
+                console.print("\n[bold cyan]╭───────────────────────────────────────────────────╮[/bold cyan]")
+                console.print(f"[bold cyan]│[/bold cyan] [bold white]Entering Interactive Shell...[/bold white]                     [bold cyan]│[/bold cyan]")
+                console.print(f"[bold cyan]│[/bold cyan] [white]Location: {os.path.abspath(current_working_dir)[:35]:<35}[/white] [bold cyan]│[/bold cyan]")
+                console.print("[bold cyan]│[/bold cyan] [bold white]Type 'exit' or press Ctrl+D to return to BrahMos.[/bold white] [bold cyan]│[/bold cyan]")
+                console.print("[bold cyan]╰───────────────────────────────────────────────────╯[/bold cyan]\n")
                 
                 cwd = os.getcwd()
                 os.chdir(current_working_dir)
@@ -212,7 +251,7 @@ def main():
                 os.system(shell_exec)
                 os.chdir(cwd)
                 
-                console.print("\n[bold magenta]Returned to BrahMos. Awaiting Directives.[/bold magenta]")
+                console.print("\n[bold cyan]Returned to BrahMos. Awaiting Directives.[/bold cyan]")
                 continue
             
             if user_input.lower().startswith("/model"):
@@ -221,13 +260,13 @@ def main():
                     new_model = parts[1].strip()
                     global MODEL_NAME
                     MODEL_NAME = new_model
-                    console.print(f"[bold purple]│[/bold purple] [green]Model switched to {MODEL_NAME}[/green]")
+                    console.print(f"[bold cyan]│[/bold cyan] [green]Model switched to {MODEL_NAME}[/green]")
                 else:
                     from config import AVAILABLE_MODELS
-                    console.print("[bold purple]│[/bold purple] Available models:")
-                    console.print(f"[bold purple]│[/bold purple] Free: {', '.join(AVAILABLE_MODELS['free'])}")
-                    console.print(f"[bold purple]│[/bold purple] Paid: {', '.join(AVAILABLE_MODELS['paid'])}")
-                    console.print(f"[bold purple]│[/bold purple] Current: {MODEL_NAME}")
+                    console.print("[bold cyan]│[/bold cyan] Available models:")
+                    console.print(f"[bold cyan]│[/bold cyan] Free: {', '.join(AVAILABLE_MODELS['free'])}")
+                    console.print(f"[bold cyan]│[/bold cyan] Paid: {', '.join(AVAILABLE_MODELS['paid'])}")
+                    console.print(f"[bold cyan]│[/bold cyan] Current: {MODEL_NAME}")
                 continue
 
             if not user_input.strip():
@@ -238,7 +277,7 @@ def main():
             turn_count = 0
             max_turns = 10
             
-            with console.status("[bold purple]...processing...[/bold purple]", spinner="dots") as status:
+            with console.status("[bold cyan]AI is thinking...[/bold cyan]", spinner="bouncingBar") as status:
                 while turn_count < max_turns:
                     turn_count += 1
                     response = get_brahmos_response(messages)
