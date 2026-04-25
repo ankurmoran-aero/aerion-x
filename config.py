@@ -27,7 +27,7 @@ AVAILABLE_MODELS = {
 }
 
 # ====== SECRETS ======
-MODEL_API_KEY = os.getenv("MODEL_API_KEY", "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")
+MODEL_API_KEY = os.getenv("MODEL_API_KEY")
 # ===============================
 
 # Branding

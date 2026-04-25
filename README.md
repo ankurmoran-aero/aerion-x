@@ -1,42 +1,48 @@
-# ⚡ BrahMos (AI Agent CLI)
+# ⚡ BrahMos: The Autonomous AI Orchestrator
 
-**Made By Ankur Moran** | **TG:** @Ankxrrrr | **IG:** \_ankurmoran\_
+[![Development](https://img.shields.io/badge/Platform-Mobile-orange?style=flat-square&logo=android)](https://github.com/ankurmoran96-openai)
+[![Developer](https://img.shields.io/badge/Developer-14--Year--Old-blue?style=flat-square)](https://github.com/ankurmoran96-openai)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-BrahMos is a professional, autonomous, terminal-based AI orchestrator capable of reading, writing, planning, and executing complex software engineering tasks directly on your machine. 
+**BrahMos** is a sophisticated, autonomous terminal-based AI agent designed to bridge the gap between complex engineering tasks and mobile-first development environments. Built entirely on a mobile device by a 14-year-old developer, BrahMos demonstrates the power of persistence and modern AI integration.
 
-## ✨ Features
-* **Modern Rich UI**: Fully animated terminal interface with Markdown parsing and syntax highlighting.
-* **Autonomous Workspace**: Automatically creates and safely isolates all generated code into a local `Workspace` directory.
-* **Interactive Architect Mode**: Uses GPT-4o to brainstorm and map out project blueprints before executing them.
-* **Dynamic Navigation**: Move the AI seamlessly through your file system using `/cd path/to/folder`.
-* **Sub-Shell Drop-in**: Use the `/shell` command to instantly drop into an interactive terminal in your active workspace without breaking context.
-* **GitHub Integration**: Ask the AI to push your projects straight to GitHub! Just provide a token and an empty repo, and it handles the git commands.
-* **Auto-dependency Resolution**: Never worry about missing packages; the system installs what it needs dynamically.
+## 📖 The Story
+> *"Innovation isn't limited by the hardware you own, but by the code you write."*
+
+BrahMos was developed as a solution to the constraints of mobile coding. It allows developers to orchestrate complex file operations, plan software architectures, and execute terminal commands through a unified, intelligent interface—all optimized for a mobile-first workflow.
+
+## ✨ Key Features
+*   **🧠 Architect Mode**: Collaborative brainstorming with GPT-4o to map out project blueprints before a single line of code is written.
+*   **🛡️ Autonomous Sandboxing**: Automatically creates and isolates all generated code into a secure `Workspace` directory.
+*   **🖥️ Integrated Shell**: A seamless `/shell` command to drop into an interactive terminal without losing AI context.
+*   **📦 Auto-Dependency Resolution**: Intelligent detection and installation of missing packages for Python and Node.js.
+*   **🎨 Rich Terminal UI**: Fully animated interface with Markdown parsing and syntax highlighting for a premium developer experience.
 
 ## 🚀 Installation
 
-You can install BrahMos directly from GitHub. This will automatically download the code, install dependencies, and register the global `brahmos` command on your system.
-
-**Run this single command in your terminal:**
 ```bash
 pip install git+https://github.com/ankurmoran96-openai/brahmos.git
 ```
 
 ## 💻 Usage
 
-Once the installation finishes, you can launch the AI from anywhere in your terminal by simply typing:
-
+Once installed, simply run:
 ```bash
 brahmos
 ```
 
-*(Note: The API key is currently built-in for immediate use. You do not need to configure any `.env` files right now!)*
+### Essential Commands
+*   `/cd <path>` - Navigate the AI's active workspace.
+*   `/shell` - Launch an interactive sub-shell.
+*   `clear` - Reset the terminal view.
+*   `exit` - Gracefully shutdown the agent.
 
-### Commands
-* `/cd <path>` - Change the directory the AI is actively working in.
-* `/shell` - Drop into an interactive terminal inside the current working directory.
-* `clear` - Clear the terminal screen.
-* `exit` or `quit` - Shutdown BrahMos.
+## 🛠 Tech Stack
+*   **Language**: Python 3.10+
+*   **AI Engine**: OpenRouter / GPT-4o / Claude-3.5-Sonnet
+*   **UI Framework**: `rich`, `prompt_toolkit`
+*   **Environment**: Termux (Android)
 
-## 🛡️ Architecture & Safety
-By default, the AI is sandboxed into a `./Workspace` directory that is created wherever you run the `brahmos` command. It will write files, start servers, and execute code within this directory unless you explicitly tell it to navigate elsewhere using the `/cd` command.
+---
+Developed with passion by **Ankur Moran**.
+[Telegram](https://t.me/Ankxrrrr) | [Instagram](https://instagram.com/_ankurmoran_)
