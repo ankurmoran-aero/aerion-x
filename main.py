@@ -8,9 +8,8 @@ from datetime import datetime
 
 # --- Auto-Install Dependencies ---
 def ensure_dependencies():
-    required = ["colorama", "requests", "beautifulsoup4", "googlesearch-python", "rich"]
+    required = ["colorama", "requests", "beautifulsoup4", "googlesearch-python", "rich", "python-dotenv"]
     for pkg in required:
-        # Map package name to import name
         import_name = "bs4" if pkg == "beautifulsoup4" else "googlesearch" if pkg == "googlesearch-python" else pkg
         try:
             __import__(import_name)
@@ -20,7 +19,7 @@ def ensure_dependencies():
 
 ensure_dependencies()
 
-# --- Third-Party Imports (Safe to import now) ---
+# --- Third-Party Imports ---
 import requests
 from colorama import Fore, Style, init
 init(autoreset=True)
@@ -31,57 +30,73 @@ from rich.markdown import Markdown
 from rich.status import Status
 console = Console()
 
-# Import modular tools AFTER dependencies are installed
+# Import modular tools
 from tools.shell_tool import run_shell
 from tools.file_tool import list_files, read_file, write_file, replace_text, search_directory
 from tools.git_tool import run_git_command
 from tools.web_tool import google_search, web_browse
 from tools.plan_tool import discuss_and_plan
 from tools.input_tool import ask_user_input
+from tools.validation_tool import validate_code
 
-from config import MODEL_API_URL, MODEL_API_KEY, MODEL_NAME, SYSTEM_PROMPT, CLI_NAME, DEVELOPER, VERSION
+from config import MODEL_API_URL, MODEL_API_KEY, MODEL_NAME, THINKER_PROMPT, CODER_PROMPT, DEBUGGER_PROMPT, CLI_NAME, DEVELOPER, VERSION
 
-# --- UI Helpers (RICH MODERN EDITION) ---
+# --- Theme Management ---
+THEMES = {
+    "cyan": {"primary": "cyan", "secondary": "purple", "accent": "white"},
+    "ocean": {"primary": "blue", "secondary": "cyan", "accent": "white"},
+    "forest": {"primary": "green", "secondary": "yellow", "accent": "white"},
+    "sunset": {"primary": "orange3", "secondary": "red", "accent": "white"},
+    "cyberpunk": {"primary": "magenta", "secondary": "yellow", "accent": "cyan"},
+    "ghost": {"primary": "bright_black", "secondary": "white", "accent": "bright_white"}
+}
+current_theme = THEMES["cyan"]
 
+def set_theme(name):
+    global current_theme
+    if name in THEMES:
+        current_theme = THEMES[name]
+        return True
+    return False
+
+# --- UI Helpers ---
 def print_banner():
     os.system('clear' if os.name == 'posix' else 'cls')
+    p = current_theme["primary"]
     
-    logo = """[bold cyan]
+    logo = f"[bold {p}]" + """
 ██████╗ ██████╗  █████╗ ██╗  ██╗███╗   ███╗ ██████╗ ███████╗
 ██╔══██╗██╔══██╗██╔══██╗██║  ██║████╗ ████║██╔═══██╗██╔════╝
 ██████╔╝██████╔╝███████║███████║██╔████╔██║██║   ██║███████╗
 ██╔══██╗██╔══██╗██╔══██║██╔══██║██║╚██╔╝██║██║   ██║╚════██║
 ██████╔╝██║  ██║██║  ██║██║  ██║██║ ╚═╝ ██║╚██████╔╝███████║
 ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝ ╚══════╝
-[/bold cyan]"""
+""" + f"[/bold {p}]"
     
-    credits_line = f" [white]Made By Ankur Moran[/white]  |  [cyan]TG:[/cyan] [white]@Ankxrrrr[/white]  |  [cyan]IG:[/cyan] [white]_ankurmoran_[/white] "
+    credits_line = f" [white]Made By Ankur Moran[/white]  |  [{p}]TG:[/{p}] [white]@Ankxrrrr[/white]  |  [{p}]IG:[/{p}] [white]_ankurmoran_[/white] "
     version_line = f" [dim]CLI Version: {VERSION}  |  Engine: {MODEL_NAME}[/dim]"
     
-    from rich.panel import Panel
     panel = Panel(
         f"{logo}\n{credits_line}\n{version_line}",
-        border_style="cyan",
+        border_style=p,
         expand=False,
         padding=(1, 4)
     )
     console.print(panel)
 
-def get_timestamp():
-    return datetime.now().strftime("%H:%M:%S")
-
-def log_brahmos(msg):
+def log_brahmos(msg, title="BrahMos AI"):
     if not msg:
         return
+    p = current_theme["primary"]
     md = Markdown(msg, justify="left")
-    from rich.panel import Panel
-    panel = Panel(md, title="[bold cyan]BrahMos AI[/bold cyan]", title_align="left", border_style="cyan", expand=True)
+    panel = Panel(md, title=f"[bold {p}]{title}[/bold {p}]", title_align="left", border_style=p, expand=True)
     console.print()
     console.print(panel)
     console.print()
 
 def log_tool(msg):
-    console.print(f"[bold blue]│ ⚙ TOOL:[/bold blue] [white]{msg}[/white]")
+    p = current_theme["primary"]
+    console.print(f"[bold {p}]│ ⚙ TOOL:[/bold {p}] [white]{msg}[/white]")
 
 def log_error(msg):
     console.print(f"[bold red]│ ✖ ERROR:[/bold red] [white]{msg}[/white]")
@@ -89,6 +104,7 @@ def log_error(msg):
 # --- OS Detection ---
 def get_os_info():
     try:
+        # Distro Detection
         distro = "Unknown"
         if os.path.exists("/etc/os-release"):
             with open("/etc/os-release") as f:
@@ -97,18 +113,37 @@ def get_os_info():
                         distro = line.strip().split("=")[1].lower().replace('"', '')
         elif "termux" in sys.prefix:
             distro = "termux"
-        return f"OS: {platform.system()}, Distro: {distro}, Machine: {platform.machine()}"
+        
+        # CPU Info
+        cpu_count = os.cpu_count()
+        
+        # RAM Info (Linux specific)
+        ram_gb = "Unknown"
+        if os.path.exists("/proc/meminfo"):
+            with open("/proc/meminfo") as f:
+                for line in f:
+                    if "MemTotal" in line:
+                        ram_kb = int(line.split()[1])
+                        ram_gb = round(ram_kb / (1024 * 1024), 2)
+                        break
+        
+        # Disk Info
+        usage = shutil.disk_usage("/")
+        disk_free = round(usage.free / (1024**3), 2)
+        disk_total = round(usage.total / (1024**3), 2)
+
+        is_root = os.getuid() == 0
+        root_status = " (ROOT)" if is_root else ""
+        
+        specs = f"OS: {platform.system()} | Distro: {distro} | CPU: {cpu_count} Cores | RAM: {ram_gb}GB | Disk: {disk_free}/{disk_total}GB Free{root_status}"
+        return specs
     except:
-        return "OS: Linux (Unknown Distro)"
+        return "OS: Linux (Unknown Specs)"
 
-# Mapping tool names to functions (using modular imports)
-
-# Global state for current working directory
 current_working_dir = "Workspace"
 
 def change_directory(path):
     global current_working_dir
-    # Handle absolute and relative paths
     new_path = os.path.abspath(os.path.join(current_working_dir, path)) if not os.path.isabs(path) else path
     if os.path.isdir(new_path):
         current_working_dir = new_path
@@ -117,13 +152,14 @@ def change_directory(path):
         return f"Error: Directory not found: {new_path}"
 
 TOOLS = {
-    "run_shell": lambda command: run_shell(command, CLI_NAME, cwd=current_working_dir),
+    "run_shell": lambda command: run_shell(command, CLI_NAME, cwd=current_working_dir, auto_approve=True),
     "list_files": lambda path=None: list_files(path if path else current_working_dir),
     "search_directory": lambda query, path=None: search_directory(query, path if path else current_working_dir),
     "run_git_command": lambda command: run_git_command(command, cwd=current_working_dir),
-    "read_file": lambda file_path: read_file(os.path.join(current_working_dir, file_path) if not os.path.isabs(file_path) else file_path),
+    "read_file": lambda file_path, start_line=None, end_line=None: read_file(os.path.join(current_working_dir, file_path) if not os.path.isabs(file_path) else file_path, start_line, end_line),
     "write_file": lambda file_path, content: write_file(os.path.join(current_working_dir, file_path) if not os.path.isabs(file_path) else file_path, content),
     "replace_text": lambda file_path, old_string, new_string, allow_multiple=False: replace_text(os.path.join(current_working_dir, file_path) if not os.path.isabs(file_path) else file_path, old_string, new_string, allow_multiple),
+    "validate_code": lambda file_path: validate_code(os.path.join(current_working_dir, file_path) if not os.path.isabs(file_path) else file_path),
     "change_directory": change_directory,
     "google_search": google_search,
     "web_browse": web_browse,
@@ -131,8 +167,28 @@ TOOLS = {
     "ask_user_input": ask_user_input
 }
 
+def trim_messages(messages, max_tokens=100000):
+    total_chars = sum(len(str(m)) for m in messages)
+    if total_chars < max_tokens * 4:
+        return messages
+
+    log_tool("Context threshold reached. Optimizing history...")
+    trimmed = [messages[0]]
+    recent_count = 15
+    if len(messages) > recent_count + 1:
+        trimmed.append({"role": "system", "content": f"[System: {len(messages) - recent_count - 1} older messages have been pruned to optimize context window.]"})
+        trimmed.extend(messages[-recent_count:])
+        return trimmed
+    return messages
+
+# --- Session Analytics ---
+total_tokens_used = 0
+total_tools_executed = 0
+
 # --- API Interaction ---
-def get_brahmos_response(messages):
+def get_brahmos_response(messages, use_tools=True):
+    global total_tokens_used
+    messages = trim_messages(messages)
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {MODEL_API_KEY}",
@@ -140,55 +196,41 @@ def get_brahmos_response(messages):
         "X-Title": "BrahMos"
     }
 
-    tools_config = [
-        {"type": "function", "function": {"name": "google_search", "description": "Search the live web for real-time info.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
-        {"type": "function", "function": {"name": "web_browse", "description": "Read content from a URL.", "parameters": {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]}}},
-        {"type": "function", "function": {"name": "run_shell", "description": "Run any shell command.", "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
-        {"type": "function", "function": {"name": "list_files", "description": "List directory contents.", "parameters": {"type": "object", "properties": {"path": {"type": "string", "description": "Optional path. Defaults to current working directory."}}}}},
-        {"type": "function", "function": {"name": "search_directory", "description": "Search for files by name or content.", "parameters": {"type": "object", "properties": {"query": {"type": "string", "description": "Text to search for"}, "path": {"type": "string", "description": "Optional path. Defaults to current working directory."}}, "required": ["query"]}}},
-        {"type": "function", "function": {"name": "run_git_command", "description": "Run a git command (e.g., 'status', 'add .', 'commit -m \"msg\"'). Do not include 'git' in the command.", "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
-        {"type": "function", "function": {"name": "read_file", "description": "Read file contents.", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}}, "required": ["file_path"]}}},
-        {"type": "function", "function": {"name": "write_file", "description": "Create/update files.", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "content": {"type": "string"}}, "required": ["file_path", "content"]}}},
-        {"type": "function", "function": {"name": "replace_text", "description": "Replace occurrences of a specific string in a file.", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "old_string": {"type": "string"}, "new_string": {"type": "string"}, "allow_multiple": {"type": "boolean"}}, "required": ["file_path", "old_string", "new_string"]}}},
-        {"type": "function", "function": {"name": "change_directory", "description": "Change the current working directory for the AI. Use this when the user gives you access to a different folder.", "parameters": {"type": "object", "properties": {"path": {"type": "string", "description": "The path to change to."}}, "required": ["path"]}}},
-        {"type": "function", "function": {"name": "discuss_and_plan", "description": "Enter an interactive chat with the user using gpt-4o to brainstorm and plan a project. Returns the final blueprint.", "parameters": {"type": "object", "properties": {"topic": {"type": "string", "description": "Optional initial topic to discuss"}}, "required": []}}},
-        {"type": "function", "function": {"name": "ask_user_input", "description": "Ask the user for specific input, such as a missing API key, token, password, or setting. If it is a secret (like a password or token), set is_secret to true so the user's input is hidden.", "parameters": {"type": "object", "properties": {"prompt_message": {"type": "string", "description": "The question or prompt to show the user."}, "is_secret": {"type": "boolean", "description": "Set to true if asking for a password/token to hide their typing."}}, "required": ["prompt_message"]}}}
-    ]
-
-    payload = {
-        "model": MODEL_NAME,
-        "messages": messages,
-        "tools": tools_config,
-        "tool_choice": "auto",
-        "temperature": 0.2
-    }
+    payload = {"model": MODEL_NAME, "messages": messages, "temperature": 0.2}
+    
+    if use_tools:
+        tools_config = [
+            {"type": "function", "function": {"name": "google_search", "description": "Search the live web.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
+            {"type": "function", "function": {"name": "web_browse", "description": "Read a URL.", "parameters": {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]}}},
+            {"type": "function", "function": {"name": "run_shell", "description": "Run shell command.", "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
+            {"type": "function", "function": {"name": "list_files", "description": "List files.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}}}},
+            {"type": "function", "function": {"name": "search_directory", "description": "Search for files.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
+            {"type": "function", "function": {"name": "read_file", "description": "Read file with range.", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "start_line": {"type": "integer"}, "end_line": {"type": "integer"}}, "required": ["file_path"]}}},
+            {"type": "function", "function": {"name": "write_file", "description": "Write file.", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "content": {"type": "string"}}, "required": ["file_path", "content"]}}},
+            {"type": "function", "function": {"name": "replace_text", "description": "Replace text in file.", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "old_string": {"type": "string"}, "new_string": {"type": "string"}}, "required": ["file_path", "old_string", "new_string"]}}},
+            {"type": "function", "function": {"name": "validate_code", "description": "Check syntax.", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}}, "required": ["file_path"]}}},
+            {"type": "function", "function": {"name": "change_directory", "description": "Change CWD.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}}
+        ]
+        payload["tools"] = tools_config
+        payload["tool_choice"] = "auto"
     
     try:
         resp = requests.post(MODEL_API_URL, headers=headers, json=payload, timeout=60)
         resp.raise_for_status()
+        data = resp.json()
         
-        try:
-            return resp.json()["choices"][0]["message"]
-        except (KeyError, json.JSONDecodeError) as e:
-            return {"role": "assistant", "content": f"BrahMos API Error: Unexpected response format: {resp.text[:200]}"}
+        # Track Token Usage
+        if "usage" in data:
+            total_tokens_used += data["usage"].get("total_tokens", 0)
             
+        return data["choices"][0]["message"]
     except Exception as e:
         return {"role": "assistant", "content": f"BrahMos API Error: {str(e)}"}
 
 SESSION_DIR = os.path.expanduser("~/.brahmos/sessions")
 
-def migrate_legacy_session():
-    legacy_file = os.path.expanduser("~/.brahmos_sessions.json")
-    if os.path.exists(legacy_file):
-        os.makedirs(SESSION_DIR, exist_ok=True)
-        new_file = os.path.join(SESSION_DIR, "legacy_session.json")
-        if not os.path.exists(new_file):
-            shutil.move(legacy_file, new_file)
-
 def list_sessions():
-    migrate_legacy_session()
-    if not os.path.exists(SESSION_DIR):
-        return []
+    if not os.path.exists(SESSION_DIR): return []
     files = [f for f in os.listdir(SESSION_DIR) if f.endswith(".json")]
     files.sort(key=lambda x: os.path.getmtime(os.path.join(SESSION_DIR, x)), reverse=True)
     return [f.replace(".json", "") for f in files]
@@ -196,246 +238,213 @@ def list_sessions():
 def load_session(session_id):
     session_file = os.path.join(SESSION_DIR, f"{session_id}.json")
     if os.path.exists(session_file):
-        try:
-            with open(session_file, 'r') as f:
-                return json.load(f)
-        except Exception as e:
-            log_error(f"Failed to load session: {e}")
+        with open(session_file, 'r') as f: return json.load(f)
     return None
 
 def save_session(session_id, messages):
     os.makedirs(SESSION_DIR, exist_ok=True)
-    session_file = os.path.join(SESSION_DIR, f"{session_id}.json")
-    try:
-        with open(session_file, 'w') as f:
-            json.dump(messages, f, indent=4)
-    except Exception as e:
-        log_error(f"Failed to save session: {e}")
+    with open(os.path.join(SESSION_DIR, f"{session_id}.json"), 'w') as f: json.dump(messages, f, indent=4)
 
 def main():
+    global total_tokens_used, total_tools_executed
     os_info = get_os_info()
     os.makedirs("Workspace", exist_ok=True)
     
     print_banner()
-    console.print(f" [purple]├─[/purple] [white]System:[/white] {os_info}")
-    console.print(f" [purple]├─[/purple] [white]Location:[/white] {os.path.abspath(current_working_dir)}")
+    p = current_theme["primary"]
+    s = current_theme["secondary"]
+    console.print(f" [{s}]├─[/{s}] [white]System:[/white] {os_info}")
+    console.print(f" [{s}]├─[/{s}] [white]Location:[/white] {os.path.abspath(current_working_dir)}")
     
-    messages = [{"role": "system", "content": f"{SYSTEM_PROMPT}\nENV: {os_info}"}]
-    
-    migrate_legacy_session()
+    base_env_message = {"role": "user", "content": f"[SYSTEM ENV INFO]\n{os_info}\nCurrent CWD: {os.path.abspath(current_working_dir)}"}
+    messages = [base_env_message]
     sessions = list_sessions()
     current_session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     if sessions:
         latest_session_id = sessions[0]
         previous_session = load_session(latest_session_id)
-        if previous_session and len(previous_session) > 1:
-            console.print(f" [purple]├─[/purple] [white]Session:[/white] [green]Previous session found ({latest_session_id}).[/green]")
-            console.print(f" [purple]└─[/purple] [white]Status:[/white] [bold magenta]Active & Awaiting Directives[/bold magenta]\n")
-            
-            prompt = f"\n[bold cyan]?[/bold cyan] Would you like to resume your previous session? (Y/n): "
-            choice = console.input(prompt).strip().lower()
-            if choice in ['', 'y', 'yes']:
+        if previous_session:
+            console.print(f" [{s}]├─[/{s}] [white]Session:[/white] [green]Previous session found.[/green]")
+            prompt = f"\n[bold {p}]?[/bold {p}] Resume session? (Y/n): "
+            if console.input(prompt).strip().lower() in ['', 'y', 'yes']:
                 messages = previous_session
                 current_session_id = latest_session_id
-                console.print("[dim]Session restored.[/dim]\n")
-            else:
-                console.print(f"[dim]Starting a fresh session ({current_session_id}).[/dim]\n")
-    else:
-        console.print(f" [purple]└─[/purple] [white]Status:[/white] [bold magenta]Active & Awaiting Directives[/bold magenta]\n")
     
     while True:
         try:
+            p = current_theme["primary"]
+            s = current_theme["secondary"]
             cwd_name = os.path.basename(os.path.abspath(current_working_dir))
-            prompt = f"\n[bold cyan]╭─ You[/bold cyan] [dim]({cwd_name})[/dim]\n[bold cyan]╰─❯ [/bold cyan]"
-            user_input = console.input(prompt)
             
-            if user_input.lower() in ["exit", "quit", "clear"]:
-                if user_input.lower() == "clear":
-                    os.system('clear')
-                    print_banner()
-                    console.print(f" [cyan]├─[/cyan] [white]System:[/white] {os_info}")
-                    console.print(f" [cyan]├─[/cyan] [white]Location:[/white] {os.path.abspath(current_working_dir)}")
-                    console.print(f" [cyan]└─[/cyan] [white]Status:[/white] [bold cyan]Active & Awaiting Directives[/bold cyan]\n")
-                    continue
+            try:
+                user_input = console.input(f"\n[bold {p}]╭─ You[/bold {p}] [dim]({cwd_name})[/dim]\n[bold {p}]╰─❯ [/bold {p}]")
+            except EOFError:
+                user_input = "/exit"
+            
+            if user_input.lower() in ["exit", "quit", "/exit"]:
+                p = current_theme["primary"]
+                console.print(f"\n[bold {p}]╭─ Session Analytics ────────────╮[/bold {p}]")
+                console.print(f"[bold {p}]│[/bold {p}] [white]Total Tokens:[/white] {total_tokens_used:,}")
+                console.print(f"[bold {p}]│[/bold {p}] [white]Tools Executed:[/white] {total_tools_executed}")
+                console.print(f"[bold {p}]│[/bold {p}] [white]Session ID:[/white] {current_session_id}")
+                console.print(f"[bold {p}]╰──────────────────────────────╯[/bold {p}]")
+                console.print(f"\n[bold green]✔[/bold green] [white]BrahMos session saved. Goodbye![/white]\n")
                 break
-                
-            if user_input.lower() in ["import antigravity", "/antigravity"]:
-                console.print("\n[bold cyan]🚀 Initiating Anti-Gravity sequence...[/bold cyan]")
-                console.print("[dim]Flying is just learning how to throw yourself at the ground and miss.[/dim]\n")
-                try:
-                    import antigravity
-                except ImportError:
-                    pass
+            if user_input.lower() == "clear":
+                print_banner()
                 continue
                 
             if user_input.lower() in ["/help", "help"]:
                 from rich.table import Table
-                table = Table(title="BrahMos Commands", border_style="cyan")
-                table.add_column("Command", style="cyan", justify="left")
+                table = Table(title="BrahMos Commands", border_style=p)
+                table.add_column("Command", style=p)
                 table.add_column("Description", style="white")
-                
-                table.add_row("/help", "Show this help message")
-                table.add_row("/model [name]", "Switch AI model or view available models")
-                table.add_row("/cd [path]", "Change the AI's working directory")
-                table.add_row("/shell", "Drop into an interactive shell inside the current directory")
-                table.add_row("/history", "View conversation history")
-                table.add_row("/resume", "View and resume previous sessions")
-                table.add_row("clear", "Clear the terminal screen")
-                table.add_row("exit / quit", "Shutdown BrahMos")
-                
+                table.add_row("/help", "Show help")
+                table.add_row("/theme [name]", f"Themes: {', '.join(THEMES.keys())}")
+                table.add_row("/model [name]", "Switch model")
+                table.add_row("/cd [path]", "Change directory")
+                table.add_row("/summary", "Session summary")
+                table.add_row("clear", "Clear screen")
+                table.add_row("exit", "Exit BrahMos")
                 console.print(table)
-                continue
-                
-            if user_input.lower() in ["/resume", "resume"]:
-                sessions = list_sessions()
-                if not sessions:
-                    console.print("[bold red]No previous sessions found.[/bold red]")
-                    continue
-                
-                from rich.table import Table
-                table = Table(title="Previous Sessions", border_style="cyan")
-                table.add_column("ID", style="cyan", justify="right")
-                table.add_column("Session Name", style="white")
-                table.add_column("Last Modified", style="dim")
-                
-                for i, sess in enumerate(sessions):
-                    mtime = os.path.getmtime(os.path.join(SESSION_DIR, f"{sess}.json"))
-                    mtime_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
-                    table.add_row(str(i+1), sess, mtime_str)
-                
-                console.print(table)
-                choice = console.input("\n[bold cyan]?[/bold cyan] Enter the ID of the session to resume (or press Enter to cancel): ")
-                if choice.isdigit() and 1 <= int(choice) <= len(sessions):
-                    selected_session = sessions[int(choice)-1]
-                    loaded_messages = load_session(selected_session)
-                    if loaded_messages:
-                        messages = loaded_messages
-                        current_session_id = selected_session
-                        console.print(f"[bold green]✔[/bold green] [white]Switched to session: {selected_session}[/white]")
-                    else:
-                        console.print("[bold red]Failed to load the selected session.[/bold red]")
-                else:
-                    console.print("[dim]Session resume cancelled.[/dim]")
-                continue
-                
-            if user_input.lower() in ["/history", "history"]:
-                console.print("\n[bold cyan]╭─ Conversation History ─╮[/bold cyan]")
-                for msg in messages:
-                    role = msg.get("role")
-                    content = msg.get("content", "")
-                    if role == "user":
-                        console.print(f"[bold cyan]You:[/bold cyan] {content}")
-                    elif role == "assistant" and content:
-                        console.print(f"[bold cyan]BrahMos:[/bold cyan] {content[:100]}..." if len(content) > 100 else f"[bold cyan]BrahMos:[/bold cyan] {content}")
-                console.print("[bold cyan]╰────────────────────────╯[/bold cyan]\n")
-                continue
-                
-            if user_input.lower().startswith("cd ") or user_input.lower().startswith("/cd "):
-                # Quick manual cd command for the user
-                new_path = user_input.split(" ", 1)[1].strip()
-                res = change_directory(new_path)
-                console.print(f"[bold cyan]│[/bold cyan] {res}")
                 continue
 
-            if user_input.lower() in ["/shell", "shell"]:
-                console.print("\n[bold cyan]╭───────────────────────────────────────────────────╮[/bold cyan]")
-                console.print(f"[bold cyan]│[/bold cyan] [bold white]Entering Interactive Shell...[/bold white]                     [bold cyan]│[/bold cyan]")
-                console.print(f"[bold cyan]│[/bold cyan] [white]Location: {os.path.abspath(current_working_dir)[:35]:<35}[/white] [bold cyan]│[/bold cyan]")
-                console.print("[bold cyan]│[/bold cyan] [bold white]Type 'exit' or press Ctrl+D to return to BrahMos.[/bold white] [bold cyan]│[/bold cyan]")
-                console.print("[bold cyan]╰───────────────────────────────────────────────────╯[/bold cyan]\n")
-                
-                cwd = os.getcwd()
-                os.chdir(current_working_dir)
-                shell_exec = shutil.which("bash") or shutil.which("sh") or os.environ.get("SHELL", "sh")
-                os.system(shell_exec)
-                os.chdir(cwd)
-                
-                console.print("\n[bold cyan]Returned to BrahMos. Awaiting Directives.[/bold cyan]")
-                continue
-            
-            if user_input.lower().startswith("/model"):
+            if user_input.lower().startswith("/theme"):
                 parts = user_input.split(" ", 1)
-                if len(parts) > 1:
-                    new_model = parts[1].strip()
-                    global MODEL_NAME
-                    MODEL_NAME = new_model
-                    console.print(f"[bold cyan]│[/bold cyan] [green]Model switched to {MODEL_NAME}[/green]")
+                if len(parts) > 1 and set_theme(parts[1].strip().lower()):
+                    console.print(f"[bold green]✔[/bold green] Theme: {parts[1].strip()}")
+                    print_banner()
                 else:
-                    from config import AVAILABLE_MODELS
-                    console.print("[bold cyan]│[/bold cyan] Available models:")
-                    console.print(f"[bold cyan]│[/bold cyan] Free: {', '.join(AVAILABLE_MODELS['free'])}")
-                    console.print(f"[bold cyan]│[/bold cyan] Paid: {', '.join(AVAILABLE_MODELS['paid'])}")
-                    console.print(f"[bold cyan]│[/bold cyan] Current: {MODEL_NAME}")
+                    console.print(f"Available themes: {', '.join(THEMES.keys())}")
                 continue
 
-            if not user_input.strip():
+            if user_input.lower() in ["/summary", "summary"]:
+                console.print(Panel(f"[bold {p}]Summary[/bold {p}]\n\nID: {current_session_id}\nCWD: {current_working_dir}\nMessages: {len(messages)}\nModel: {MODEL_NAME}", border_style=p))
                 continue
-                
+
+            if not user_input.strip(): continue
+            
+            # --- 3-AGENT AUTONOMOUS LOOP ---
             messages.append({"role": "user", "content": user_input})
             
-            turn_count = 0
-            max_turns = 10
+            # 1. Thinker Phase
+            with console.status(f"[bold {p}]Thinker Agent is planning...[/bold {p}]") as status:
+                thinker_messages = [{"role": "system", "content": THINKER_PROMPT}] + messages
+                thinker_response = get_brahmos_response(thinker_messages, use_tools=False)
+                plan_content = thinker_response.get("content", "")
+                
+                status.stop()
+                log_brahmos(plan_content, title="Thinker Agent")
+                status.start()
+                
+                messages.append({"role": "assistant", "content": f"[Thinker Plan]:\n{plan_content}"})
             
-            with console.status("[bold cyan]AI is thinking...[/bold cyan]", spinner="bouncingBar") as status:
-                while turn_count < max_turns:
-                    turn_count += 1
-                    response = get_brahmos_response(messages)
+            # 2. Coder Phase
+            with console.status(f"[bold {p}]Coder Agent is executing...[/bold {p}]") as status:
+                coder_messages = [{"role": "system", "content": CODER_PROMPT}] + messages
+                
+                coder_turns = 0
+                max_coder_turns = 15
+                fail_count = 0
+                
+                while coder_turns < max_coder_turns:
+                    coder_turns += 1
+                    response = get_brahmos_response(coder_messages, use_tools=True)
+                    coder_messages.append(response)
                     messages.append(response)
                     
                     if response.get("content"):
                         status.stop()
-                        log_brahmos(response["content"])
+                        log_brahmos(response["content"], title="Coder Agent")
                         status.start()
-                    
+                        
                     if "tool_calls" in response and response["tool_calls"]:
-                        for tool_call in response["tool_calls"]:
-                            func_name = tool_call["function"]["name"]
-                            
+                        for tc in response["tool_calls"]:
+                            func = tc["function"]["name"]
                             try:
-                                args = json.loads(tool_call["function"]["arguments"])
-                            except Exception as e:
-                                messages.append({
-                                    "role": "tool",
-                                    "tool_call_id": tool_call["id"],
-                                    "name": func_name,
-                                    "content": f"Error parsing arguments: {str(e)}"
-                                })
-                                continue
+                                args = json.loads(tc["function"]["arguments"])
+                            except:
+                                args = {}
+                                
+                            status.stop(); log_tool(f"Coder running {func}..."); 
                             
-                            status.stop()
-                            log_tool(f"Executing {func_name}...")
-                            tool_func = TOOLS.get(func_name)
-                            if tool_func:
-                                result = tool_func(**args)
-                                messages.append({
-                                    "role": "tool",
-                                    "tool_call_id": tool_call["id"],
-                                    "name": func_name,
-                                    "content": str(result)
-                                })
-                            else:
-                                messages.append({
-                                    "role": "tool",
-                                    "tool_call_id": tool_call["id"],
-                                    "name": func_name,
-                                    "content": f"Error: Tool {func_name} not found."
-                                })
+                            # Track tool execution
+                            total_tools_executed += 1
+                            
+                            # Execute Tool
+                            try:
+                                res = TOOLS[func](**args)
+                            except Exception as e:
+                                res = f"Tool execution failed: {str(e)}"
+                                
+                            tool_msg = {"role": "tool", "tool_call_id": tc["id"], "name": func, "content": str(res)}
+                            coder_messages.append(tool_msg)
+                            messages.append(tool_msg)
                             status.start()
+                            
+                            # Check if the shell command failed
+                            if func == "run_shell" and ("Error" in str(res) or "Exception" in str(res) or "failed" in str(res).lower()):
+                                fail_count += 1
+                                status.stop()
+                                log_error(f"Execution failed! (Attempt {fail_count}/5)")
+                                status.start()
+                                
+                        if fail_count >= 5:
+                            status.stop()
+                            log_error("Coder Agent failed 5 times! Waking up Watchdog Agent...")
+                            status.start()
+                            break # Break coder loop, trigger debugger
                         continue
-                    else:
-                        break
-                
-                if turn_count >= max_turns:
-                    log_error("Maximum autonomous turns reached. Pausing for safety.")
+                    break # Coder finished successfully
+            
+            # 3. Watchdog Phase
+            if fail_count >= 5:
+                with console.status(f"[bold {p}]Watchdog Agent is debugging...[/bold {p}]") as status:
+                    debugger_messages = [{"role": "system", "content": DEBUGGER_PROMPT}] + messages
+                    
+                    debugger_turns = 0
+                    while debugger_turns < 10:
+                        debugger_turns += 1
+                        response = get_brahmos_response(debugger_messages, use_tools=True)
+                        debugger_messages.append(response)
+                        messages.append(response)
+                        
+                        if response.get("content"):
+                            status.stop()
+                            log_brahmos(response["content"], title="Watchdog Agent")
+                            status.start()
+                            
+                        if "tool_calls" in response and response["tool_calls"]:
+                            for tc in response["tool_calls"]:
+                                func = tc["function"]["name"]
+                                try:
+                                    args = json.loads(tc["function"]["arguments"])
+                                except:
+                                    args = {}
+                                    
+                                status.stop(); log_tool(f"Watchdog running {func}..."); 
+                                
+                                # Track tool execution
+                                total_tools_executed += 1
+                                
+                                try:
+                                    res = TOOLS[func](**args)
+                                except Exception as e:
+                                    res = f"Tool execution failed: {str(e)}"
+                                    
+                                tool_msg = {"role": "tool", "tool_call_id": tc["id"], "name": func, "content": str(res)}
+                                debugger_messages.append(tool_msg)
+                                messages.append(tool_msg)
+                                status.start()
+                            continue
+                        break # Debugger finished
             
             save_session(current_session_id, messages)
-            
-        except KeyboardInterrupt:
-            console.print(f"\n[bold red]Safe shutdown initiated.[/bold red]")
+        except KeyboardInterrupt: 
+            console.print("\n[bold red]Operation cancelled.[/bold red]")
             break
-        except Exception as e:
+        except Exception as e: 
             log_error(str(e))
 
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__": main()

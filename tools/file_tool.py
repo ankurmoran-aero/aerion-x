@@ -10,11 +10,24 @@ def list_files(path="Workspace"):
     except Exception as e:
         return f"Error listing files: {str(e)}"
 
-def read_file(file_path):
-    """Reads content from a file."""
+def read_file(file_path, start_line=None, end_line=None):
+    """Reads content from a file, optionally within a specific line range."""
     try:
         with open(file_path, 'r') as f:
-            return f.read()
+            lines = f.readlines()
+            
+        total_lines = len(lines)
+        if start_line is not None or end_line is not None:
+            start = (start_line - 1) if start_line else 0
+            end = end_line if end_line else total_lines
+            lines = lines[start:end]
+            
+        # Add line numbers for better AI navigation
+        numbered_lines = [f"{i + (start_line or 1):4}: {line}" for i, line in enumerate(lines)]
+        content = "".join(numbered_lines)
+        
+        range_info = f" (Lines {start_line or 1}-{end_line or total_lines} of {total_lines})" if start_line or end_line else f" ({total_lines} lines total)"
+        return f"--- FILE: {file_path}{range_info} ---\n{content}\n--- END OF FILE ---"
     except Exception as e:
         return f"Error reading file: {str(e)}"
 
