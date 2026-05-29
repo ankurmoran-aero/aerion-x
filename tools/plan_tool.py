@@ -84,7 +84,7 @@ def discuss_and_plan(topic=""):
         if user_input.lower() == 'done':
             messages.append({
                 "role": "user", 
-                "content": "Summarize our discussion into a highly detailed, step-by-step technical execution plan. This plan will be passed directly to an autonomous God Mode AI (BrahMos) to build. Include file structures, exact tech stacks, and step-by-step instructions. Do NOT include pleasantries, just the plan."
+                "content": "Summarize our discussion into a highly detailed, step-by-step technical execution plan. This plan will be passed directly to an autonomous God Mode AI (Aerocity) to build. Include file structures, exact tech stacks, and step-by-step instructions. Do NOT include pleasantries, just the plan."
             })
             payload["messages"] = messages
 

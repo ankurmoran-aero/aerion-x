@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# BrahMos Universal CLI Configuration
+# Aerocity Universal CLI Configuration
 # Developer: @Ankxrrrr
-# Support: @BrahMosAI
+# Support: @AerocityAI
 
 # Model / API
 MODEL_API_URL = os.getenv("MODEL_API_URL", "https://openrouter.ai/api/v1/chat/completions")
@@ -21,7 +21,7 @@ AVAILABLE_MODELS = {
     ],
     "paid": [
         "anthropic/claude-3.7-sonnet",
-        "openai/gpt-4o",
+        "zenith/gpt-4o",
         "google/gemini-2.5-pro"
     ]
 }
@@ -31,7 +31,7 @@ MODEL_API_KEY = os.getenv("MODEL_API_KEY")
 # ===============================
 
 # Branding
-CLI_NAME = "BrahMos"
+CLI_NAME = "Aerocity"
 DEVELOPER = "Ankur Moran"
 VERSION = "v5.0.0-AUTO"
 

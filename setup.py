@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="brahmos-core",
+    name="aerocity-core",
     version="4.5.2",
     author="@Ankxrrrr",
     description="The ultimate autonomous system orchestrator.",
@@ -17,7 +17,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "brahmos=main:main",
+            "aerocity=main:main",
         ],
     },
 )

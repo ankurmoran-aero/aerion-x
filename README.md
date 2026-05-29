@@ -1,15 +1,15 @@
-# ⚡ BrahMos: The Autonomous AI Orchestrator
+# ⚡ Aerocity: The Autonomous AI Orchestrator
 
 [![Development](https://img.shields.io/badge/Platform-Mobile-orange?style=flat-square&logo=android)](https://github.com/ankurmoran96-openai)
 [![Developer](https://img.shields.io/badge/Developer-14--Year--Old-blue?style=flat-square)](https://github.com/ankurmoran96-openai)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-**BrahMos** is a sophisticated, autonomous terminal-based AI agent designed to bridge the gap between complex engineering tasks and mobile-first development environments. Built entirely on a mobile device by a 14-year-old developer, BrahMos demonstrates the power of persistence and modern AI integration.
+**Aerocity** is a sophisticated, autonomous terminal-based AI agent designed to bridge the gap between complex engineering tasks and mobile-first development environments. Built entirely on a mobile device by a 14-year-old developer, Aerocity demonstrates the power of persistence and modern AI integration.
 
 ## 📖 The Story
 > *"Innovation isn't limited by the hardware you own, but by the code you write."*
 
-BrahMos was developed as a solution to the constraints of mobile coding. It allows developers to orchestrate complex file operations, plan software architectures, and execute terminal commands through a unified, intelligent interface—all optimized for a mobile-first workflow.
+Aerocity was developed as a solution to the constraints of mobile coding. It allows developers to orchestrate complex file operations, plan software architectures, and execute terminal commands through a unified, intelligent interface—all optimized for a mobile-first workflow.
 
 ## ✨ Key Features
 *   **🧠 Architect Mode**: Collaborative brainstorming with GPT-4o to map out project blueprints before a single line of code is written.
@@ -21,14 +21,14 @@ BrahMos was developed as a solution to the constraints of mobile coding. It allo
 ## 🚀 Installation
 
 ```bash
-pip install git+https://github.com/ankurmoran96-openai/brahmos.git
+pip install git+https://github.com/ankurmoran-aero/aerocity.git
 ```
 
 ## 💻 Usage
 
 Once installed, simply run:
 ```bash
-brahmos
+aerocity
 ```
 
 ### Essential Commands

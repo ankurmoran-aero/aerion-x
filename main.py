@@ -84,7 +84,7 @@ def print_banner():
     )
     console.print(panel)
 
-def log_brahmos(msg, title="BrahMos AI"):
+def log_aerocity(msg, title="Aerocity AI"):
     if not msg:
         return
     p = current_theme["primary"]
@@ -189,14 +189,14 @@ total_tokens_used = 0
 total_tools_executed = 0
 
 # --- API Interaction ---
-def get_brahmos_response(messages, use_tools=True):
+def get_aerocity_response(messages, use_tools=True):
     global total_tokens_used
     messages = trim_messages(messages)
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {MODEL_API_KEY}",
-        "HTTP-Referer": "https://github.com/ankurmoran96-openai/brahmos",
-        "X-Title": "BrahMos"
+        "HTTP-Referer": "https://github.com/ankurmoran-aero/aerocity",
+        "X-Title": "Aerocity"
     }
 
     payload = {"model": MODEL_NAME, "messages": messages, "temperature": 0.2}
@@ -228,9 +228,9 @@ def get_brahmos_response(messages, use_tools=True):
             
         return data["choices"][0]["message"]
     except Exception as e:
-        return {"role": "assistant", "content": f"BrahMos API Error: {str(e)}"}
+        return {"role": "assistant", "content": f"Aerocity API Error: {str(e)}"}
 
-SESSION_DIR = os.path.expanduser("~/.brahmos/sessions")
+SESSION_DIR = os.path.expanduser("~/.aerocity/sessions")
 
 def list_sessions():
     if not os.path.exists(SESSION_DIR): return []
@@ -292,7 +292,7 @@ def main():
                 console.print(f"[bold {p}]│[/bold {p}] [white]Tools Executed:[/white] {total_tools_executed}")
                 console.print(f"[bold {p}]│[/bold {p}] [white]Session ID:[/white] {current_session_id}")
                 console.print(f"[bold {p}]╰──────────────────────────────╯[/bold {p}]")
-                console.print(f"\n[bold green]✔[/bold green] [white]BrahMos session saved. Goodbye![/white]\n")
+                console.print(f"\n[bold green]✔[/bold green] [white]Aerocity session saved. Goodbye![/white]\n")
                 break
             if user_input.lower() == "clear":
                 print_banner()
@@ -300,7 +300,7 @@ def main():
                 
             if user_input.lower() in ["/help", "help"]:
                 from rich.table import Table
-                table = Table(title="BrahMos Commands", border_style=p)
+                table = Table(title="Aerocity Commands", border_style=p)
                 table.add_column("Command", style=p)
                 table.add_column("Description", style="white")
                 table.add_row("/help", "Show help")
@@ -309,7 +309,7 @@ def main():
                 table.add_row("/cd [path]", "Change directory")
                 table.add_row("/summary", "Session summary")
                 table.add_row("clear", "Clear screen")
-                table.add_row("exit", "Exit BrahMos")
+                table.add_row("exit", "Exit Aerocity")
                 console.print(table)
                 continue
 
@@ -334,11 +334,11 @@ def main():
             # 1. Thinker Phase
             with console.status(f"[bold {p}]Thinker Agent is planning...[/bold {p}]") as status:
                 thinker_messages = [{"role": "system", "content": THINKER_PROMPT}] + messages
-                thinker_response = get_brahmos_response(thinker_messages, use_tools=False)
+                thinker_response = get_aerocity_response(thinker_messages, use_tools=False)
                 plan_content = thinker_response.get("content", "")
                 
                 status.stop()
-                log_brahmos(plan_content, title="Thinker Agent")
+                log_aerocity(plan_content, title="Thinker Agent")
                 status.start()
                 
                 messages.append({"role": "assistant", "content": f"[Thinker Plan]:\n{plan_content}"})
@@ -353,13 +353,13 @@ def main():
                 
                 while coder_turns < max_coder_turns:
                     coder_turns += 1
-                    response = get_brahmos_response(coder_messages, use_tools=True)
+                    response = get_aerocity_response(coder_messages, use_tools=True)
                     coder_messages.append(response)
                     messages.append(response)
                     
                     if response.get("content"):
                         status.stop()
-                        log_brahmos(response["content"], title="Coder Agent")
+                        log_aerocity(response["content"], title="Coder Agent")
                         status.start()
                         
                     if "tool_calls" in response and response["tool_calls"]:
@@ -409,13 +409,13 @@ def main():
                     debugger_turns = 0
                     while debugger_turns < 10:
                         debugger_turns += 1
-                        response = get_brahmos_response(debugger_messages, use_tools=True)
+                        response = get_aerocity_response(debugger_messages, use_tools=True)
                         debugger_messages.append(response)
                         messages.append(response)
                         
                         if response.get("content"):
                             status.stop()
-                            log_brahmos(response["content"], title="Watchdog Agent")
+                            log_aerocity(response["content"], title="Watchdog Agent")
                             status.start()
                             
                         if "tool_calls" in response and response["tool_calls"]:
