@@ -173,12 +173,15 @@ def trim_messages(messages, max_tokens=100000):
         return messages
 
     log_tool("Context threshold reached. Optimizing history...")
-    trimmed = [messages[0]]
+    system_msg = messages[0]
     recent_count = 15
     if len(messages) > recent_count + 1:
-        trimmed.append({"role": "system", "content": f"[System: {len(messages) - recent_count - 1} older messages have been pruned to optimize context window.]"})
-        trimmed.extend(messages[-recent_count:])
-        return trimmed
+        pruned_count = len(messages) - recent_count - 1
+        recent = messages[-recent_count:]
+        messages.clear()
+        messages.append(system_msg)
+        messages.append({"role": "system", "content": f"[System: {pruned_count} older messages have been pruned to optimize context window.]"})
+        messages.extend(recent)
     return messages
 
 # --- Session Analytics ---
