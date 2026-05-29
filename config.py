@@ -1,8 +1,14 @@
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables from local .env file
 load_dotenv()
+
+# Try loading from global ~/.aerocity/.env
+AEROCITY_DIR = os.path.expanduser("~/.aerocity")
+GLOBAL_ENV_FILE = os.path.join(AEROCITY_DIR, ".env")
+if not os.getenv("MODEL_API_KEY") and os.path.exists(GLOBAL_ENV_FILE):
+    load_dotenv(GLOBAL_ENV_FILE)
 
 # Aerocity Universal CLI Configuration
 # Developer: @Ankxrrrr

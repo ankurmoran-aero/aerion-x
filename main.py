@@ -253,6 +253,28 @@ def main():
     os_info = get_os_info()
     os.makedirs("Workspace", exist_ok=True)
     
+    import config
+    import sys
+    if not config.MODEL_API_KEY:
+        print_banner()
+        console.print("[bold yellow]Welcome to Aerocity CLI![/bold yellow]")
+        console.print("[white]To get started, please provide your API Key (e.g., from OpenRouter, OpenAI, or GPTNix).[/white]")
+        try:
+            api_key = input("API Key: ").strip()
+        except EOFError:
+            api_key = ""
+            
+        if not api_key:
+            console.print("[bold red]Error: API Key is required to run Aerocity.[/bold red]")
+            sys.exit(1)
+        
+        os.makedirs(config.AEROCITY_DIR, exist_ok=True)
+        with open(config.GLOBAL_ENV_FILE, "a") as f:
+            f.write(f"\nMODEL_API_KEY={api_key}\n")
+            
+        config.MODEL_API_KEY = api_key
+        console.print("[bold green]API Key saved successfully! You can update it later in ~/.aerocity/.env[/bold green]\n")
+    
     print_banner()
     p = current_theme["primary"]
     s = current_theme["secondary"]
