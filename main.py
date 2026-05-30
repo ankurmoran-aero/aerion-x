@@ -245,12 +245,12 @@ def get_aerion_x_response(messages, use_tools=True, stream_callback=None):
     messages = trim_messages(messages)
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {MODEL_API_KEY}",
+        "Authorization": f"Bearer {config.MODEL_API_KEY}",
         "HTTP-Referer": "https://github.com/ankurmoran-aero/aerion-x",
         "X-Title": "Aerion-X"
     }
 
-    payload = {"model": MODEL_NAME, "messages": messages, "temperature": 0.2}
+    payload = {"model": config.MODEL_NAME, "messages": messages, "temperature": 0.2}
     
     if use_tools:
         tools_config = [
@@ -272,7 +272,7 @@ def get_aerion_x_response(messages, use_tools=True, stream_callback=None):
         payload["stream"] = True
 
     try:
-        resp = requests.post(MODEL_API_URL, headers=headers, json=payload, timeout=60, stream=bool(stream_callback))
+        resp = requests.post(config.MODEL_API_URL, headers=headers, json=payload, timeout=60, stream=bool(stream_callback))
         resp.raise_for_status()
         
         if stream_callback:
