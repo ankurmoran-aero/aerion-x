@@ -60,7 +60,7 @@ from rich.align import Align
 console = Console()
 
 # --- Autocomplete ---
-from prompt_toolkit import prompt
+from prompt_toolkit import prompt as pt_prompt
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.styles import Style as PTStyle
 
@@ -445,7 +445,7 @@ def main():
                 cmd_completer = WordCompleter(slash_commands, ignore_case=True, match_middle=False)
                 
                 # We use prompt_toolkit so autocomplete drops down menus when typing /
-                user_input = prompt("╰─❯ ", completer=cmd_completer)
+                user_input = pt_prompt("╰─❯ ", completer=cmd_completer)
             except EOFError:
                 user_input = "/exit"
             
