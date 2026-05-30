@@ -12,7 +12,6 @@ def check_for_updates():
         if os.environ.get("AERION_SKIP_UPDATE"):
             return
 
-        import subprocess, sys, os
         print("[*] Checking for Aerion-X updates...")
         
         out = subprocess.run(["git", "ls-remote", "https://github.com/ankurmoran-aero/aerion-x.git", "HEAD"], capture_output=True, text=True, check=True)
