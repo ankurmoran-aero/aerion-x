@@ -129,7 +129,7 @@ def print_banner():
     
     table.add_row(
         f"[{p}]Architect:[/{p}] [white]Ankur Moran[/white]",
-        f"[{s}]Version:[/{s}] [bold white]v6.0.0-PRO[/bold white]"
+        f"[{s}]Version:[/{s}] [bold white]v6.2.0-PRO[/bold white]"
     )
     table.add_row(
         f"[{p}]Network:[/{p}] [white]Aerion-X Net[/white]",
