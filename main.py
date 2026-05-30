@@ -129,7 +129,7 @@ def print_banner():
     
     table.add_row(
         f"[{p}]Architect:[/{p}] [white]Ankur Moran[/white]",
-        f"[{s}]Version:[/{s}] [bold white]v6.2.0-PRO[/bold white]"
+        f"[{s}]Version:[/{s}] [bold white]v6.3.0-PRO[/bold white]"
     )
     table.add_row(
         f"[{p}]Network:[/{p}] [white]Aerion-X Net[/white]",
@@ -268,9 +268,13 @@ def get_aerion_x_response(messages, use_tools=True, stream_callback=None):
         "X-Title": "Aerion-X"
     }
 
-    payload = {"model": config.MODEL_NAME, "messages": messages, "temperature": 0.2}
+    payload = {"model": config.MODEL_NAME, "messages": list(messages), "temperature": 0.2}
     
-    if use_tools:
+    supports_native_tools = True
+    if "claude" in config.MODEL_NAME.lower() or "grok" in config.MODEL_NAME.lower():
+        supports_native_tools = False
+
+    if use_tools and supports_native_tools:
         tools_config = [
             {"type": "function", "function": {"name": "google_search", "description": "Search the live web.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
             {"type": "function", "function": {"name": "web_browse", "description": "Read a URL.", "parameters": {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]}}},
@@ -285,6 +289,9 @@ def get_aerion_x_response(messages, use_tools=True, stream_callback=None):
         ]
         payload["tools"] = tools_config
         payload["tool_choice"] = "auto"
+    elif use_tools and not supports_native_tools:
+        manual_prompt = "You do not support native tool calling. To execute a tool, output a JSON block formatted EXACTLY like this:\n```json\n{\n  \"tool_calls\": [\n    {\n      \"name\": \"run_shell\",\n      \"arguments\": {\"command\": \"ls -la\"}\n    }\n  ]\n}\n```\nDo not output anything else if you want to call a tool."
+        payload["messages"].append({"role": "system", "content": manual_prompt})
     
     if stream_callback:
         payload["stream"] = True
@@ -331,12 +338,61 @@ def get_aerion_x_response(messages, use_tools=True, stream_callback=None):
                 final_message["tool_calls"] = list(tool_calls.values())
             
             total_tokens_used += int(len(full_content) / 4) # Approximation
+            
+            if use_tools and not supports_native_tools:
+                import re
+                c = final_message.get("content", "")
+                if "```json" in c:
+                    match = re.search(r'```json\s*(\{.*?\})\s*```', c, re.DOTALL)
+                    if match:
+                        try:
+                            import json
+                            parsed = json.loads(match.group(1))
+                            if "tool_calls" in parsed:
+                                final_message["tool_calls"] = []
+                                for idx, tc in enumerate(parsed["tool_calls"]):
+                                    final_message["tool_calls"].append({
+                                        "id": f"call_{idx}",
+                                        "type": "function",
+                                        "function": {
+                                            "name": tc.get("name", ""),
+                                            "arguments": json.dumps(tc.get("arguments", {}))
+                                        }
+                                    })
+                                final_message["content"] = c.replace(match.group(0), "").strip()
+                        except:
+                            pass
             return final_message
         else:
             data = resp.json()
             if "usage" in data:
                 total_tokens_used += data["usage"].get("total_tokens", 0)
-            return data["choices"][0]["message"]
+            final_message = data["choices"][0]["message"]
+            
+            if use_tools and not supports_native_tools:
+                import re
+                c = final_message.get("content", "")
+                if c and "```json" in c:
+                    match = re.search(r'```json\s*(\{.*?\})\s*```', c, re.DOTALL)
+                    if match:
+                        try:
+                            import json
+                            parsed = json.loads(match.group(1))
+                            if "tool_calls" in parsed:
+                                final_message["tool_calls"] = []
+                                for idx, tc in enumerate(parsed["tool_calls"]):
+                                    final_message["tool_calls"].append({
+                                        "id": f"call_{idx}",
+                                        "type": "function",
+                                        "function": {
+                                            "name": tc.get("name", ""),
+                                            "arguments": json.dumps(tc.get("arguments", {}))
+                                        }
+                                    })
+                                final_message["content"] = c.replace(match.group(0), "").strip()
+                        except:
+                            pass
+            return final_message
     except Exception as e:
         return {"role": "assistant", "content": f"Aerion-X API Error: {str(e)}"}
 
