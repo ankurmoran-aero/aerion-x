@@ -345,7 +345,19 @@ def main():
                 continue
 
             if user_input.lower() in ["/summary", "summary"]:
-                console.print(Panel(f"[bold {p}]Summary[/bold {p}]\n\nID: {current_session_id}\nCWD: {current_working_dir}\nMessages: {len(messages)}\nModel: {MODEL_NAME}", border_style=p))
+                console.print(Panel(f"[bold {p}]Summary[/bold {p}]\n\nID: {current_session_id}\nCWD: {current_working_dir}\nMessages: {len(messages)}\nModel: {config.MODEL_NAME}", border_style=p))
+                continue
+
+            if user_input.lower().startswith("/model"):
+                parts = user_input.split(" ", 1)
+                if len(parts) > 1:
+                    new_model = parts[1].strip()
+                    config.MODEL_NAME = new_model
+                    console.print(f"[bold green]✔[/bold green] [white]Model switched to:[/white] [bold {p}]{new_model}[/bold {p}]")
+                else:
+                    console.print(f"[bold yellow]Current Model:[/bold yellow] {config.MODEL_NAME}")
+                    console.print("[dim]Usage: /model <model_name>[/dim]")
+                    console.print("[dim]Available models in config: " + ", ".join(config.AVAILABLE_MODELS["free"] + config.AVAILABLE_MODELS["paid"]) + "[/dim]")
                 continue
 
             if not user_input.strip(): continue
