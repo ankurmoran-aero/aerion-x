@@ -340,23 +340,6 @@ def get_aerion_x_response(messages, use_tools=True, stream_callback=None):
     except Exception as e:
         return {"role": "assistant", "content": f"Aerion-X API Error: {str(e)}"}
 
-def generate_layout():
-    layout = Layout(name="root")
-    layout.split(
-        Layout(name="header", size=6),
-        Layout(name="main", ratio=1),
-        Layout(name="footer", size=3)
-    )
-    layout["main"].split_row(
-        Layout(name="chat", ratio=2),
-        Layout(name="agents", ratio=1)
-    )
-    layout["agents"].split_column(
-        Layout(name="thinker", ratio=1),
-        Layout(name="coder", ratio=1),
-        Layout(name="watchdog", ratio=1)
-    )
-    return layout
 
 SESSION_DIR = os.path.expanduser("~/.aerion-x/sessions")
 
@@ -604,41 +587,20 @@ def main():
             
             # --- 3-AGENT AUTONOMOUS LOOP ---
             messages.append({"role": "user", "content": user_input})
-            
-            layout = generate_layout()
             p = current_theme["primary"]
             s = current_theme["secondary"]
             
-            logo = f"[bold {p}]A E R I O N - X   D A S H B O A R D[/bold {p}]\n[white]Aerion-X Net v6.0.0-PRO[/white]"
-            layout["header"].update(Panel(Align.center(logo), style=p))
-            layout["footer"].update(Panel(f"Status: Executing... | Tokens: {total_tokens_used}", style="dim"))
+            from rich.status import Status
             
-            chat_history_str = ""
-            for m in messages[-6:]:
-                role = "User" if m["role"] == "user" else "Agent"
-                c = m.get('content') or '<Tool Call/Result>'
-                chat_history_str += f"**{role}**: {c}\n\n"
-            
-            layout["chat"].update(Panel(Markdown(chat_history_str), title=f"[bold {p}]Terminal / History[/bold {p}]", border_style=p))
-            
-            layout["thinker"].update(Panel("Idle", title=f"[bold {p}]Thinker[/bold {p}]", border_style=p))
-            layout["coder"].update(Panel("Idle", title=f"[bold {s}]Coder[/bold {s}]", border_style=s))
-            layout["watchdog"].update(Panel("Idle", title=f"[bold red]Watchdog[/bold red]", border_style="red"))
-            
-            with Live(layout, refresh_per_second=15, screen=True) as live:
+            with Status(f"[bold {p}]Agent is reasoning...[/bold {p}]", spinner="dots") as status:
                 # 1. Thinker Phase
-                layout["thinker"].update(Panel("[bold yellow]Thinking...[/bold yellow]", title=f"[bold {p}]Thinker[/bold {p}]", border_style=p))
                 thinker_messages = [{"role": "system", "content": THINKER_PROMPT}] + messages
-                
-                def thinker_stream(chunk, full):
-                    layout["thinker"].update(Panel(Markdown(full), title=f"[bold {p}]Thinker[/bold {p}]", border_style=p))
-                    layout["footer"].update(Panel(f"Status: Thinker Processing | Tokens: {total_tokens_used}", style="dim"))
-                
-                thinker_response = get_aerion_x_response(thinker_messages, use_tools=False, stream_callback=thinker_stream)
+                thinker_response = get_aerion_x_response(thinker_messages, use_tools=False, stream_callback=None)
                 plan_content = thinker_response.get("content", "")
                 messages.append({"role": "assistant", "content": f"[Thinker Plan]:\n{plan_content}"})
                 
                 # 2. Coder Phase
+                status.update(f"[bold {s}]Executing tasks...[/bold {s}]")
                 coder_messages = [{"role": "system", "content": CODER_PROMPT}] + messages
                 coder_turns = 0
                 max_coder_turns = 15
@@ -646,13 +608,8 @@ def main():
                 
                 while coder_turns < max_coder_turns:
                     coder_turns += 1
-                    layout["coder"].update(Panel("[bold yellow]Executing...[/bold yellow]", title=f"[bold {s}]Coder (Turn {coder_turns})[/bold {s}]", border_style=s))
-                    
-                    def coder_stream(chunk, full):
-                        layout["coder"].update(Panel(Markdown(full), title=f"[bold {s}]Coder (Turn {coder_turns})[/bold {s}]", border_style=s))
-                        layout["footer"].update(Panel(f"Status: Coder Generating | Tokens: {total_tokens_used}", style="dim"))
-                        
-                    response = get_aerion_x_response(coder_messages, use_tools=True, stream_callback=coder_stream)
+                    status.update(f"[bold {s}]Generating code/tools...[/bold {s}]")
+                    response = get_aerion_x_response(coder_messages, use_tools=True, stream_callback=None)
                     coder_messages.append(response)
                     messages.append(response)
                     
@@ -664,7 +621,7 @@ def main():
                             except:
                                 args = {}
                                 
-                            layout["coder"].update(Panel(f"⚙️ Running Tool: [bold]{func}[/bold]...", title=f"[bold {s}]Coder Tool Execute[/bold {s}]", border_style=s))
+                            status.update(f"[bold cyan]⚙️ Running tool:[/bold cyan] {func}...")
                             total_tools_executed += 1
                             
                             try:
@@ -686,18 +643,14 @@ def main():
                 
                 # 3. Watchdog Phase
                 if fail_count >= 5:
-                    layout["watchdog"].update(Panel("[bold yellow]Debugging...[/bold yellow]", title="[bold red]Watchdog[/bold red]", border_style="red"))
+                    status.update(f"[bold red]Watchdog debugging error loop...[/bold red]")
                     debugger_messages = [{"role": "system", "content": DEBUGGER_PROMPT}] + messages
-                    
                     debugger_turns = 0
+                    
                     while debugger_turns < 10:
                         debugger_turns += 1
-                        
-                        def watchdog_stream(chunk, full):
-                            layout["watchdog"].update(Panel(Markdown(full), title=f"[bold red]Watchdog (Turn {debugger_turns})[/bold red]", border_style="red"))
-                            layout["footer"].update(Panel(f"Status: Watchdog Analyzing | Tokens: {total_tokens_used}", style="dim"))
-                            
-                        response = get_aerion_x_response(debugger_messages, use_tools=True, stream_callback=watchdog_stream)
+                        status.update(f"[bold red]Debugging...[/bold red]")
+                        response = get_aerion_x_response(debugger_messages, use_tools=True, stream_callback=None)
                         debugger_messages.append(response)
                         messages.append(response)
                         
@@ -709,7 +662,7 @@ def main():
                                 except:
                                     args = {}
                                     
-                                layout["watchdog"].update(Panel(f"⚙️ Running Tool: [bold]{func}[/bold]...", title="[bold red]Watchdog Tool Execute[/bold red]", border_style="red"))
+                                status.update(f"[bold cyan]⚙️ Debugging Tool:[/bold cyan] {func}...")
                                 total_tools_executed += 1
                                 
                                 try:
