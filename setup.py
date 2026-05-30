@@ -13,7 +13,8 @@ setup(
         "beautifulsoup4",
         "googlesearch-python",
         "rich",
-        "python-dotenv"
+        "python-dotenv",
+        "prompt_toolkit"
     ],
     entry_points={
         "console_scripts": [
