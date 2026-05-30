@@ -328,7 +328,9 @@ def main():
             except EOFError:
                 user_input = "/exit"
             
-            if user_input.lower() in ["exit", "quit", "/exit"]:
+            cmd = user_input.lower().split()[0] if user_input.strip() else ""
+            
+            if cmd in ["exit", "quit", "/exit"]:
                 p = current_theme["primary"]
                 console.print(f"\n[bold {p}]╭─ Session Analytics ────────────╮[/bold {p}]")
                 console.print(f"[bold {p}]│[/bold {p}] [white]Total Tokens:[/white] {total_tokens_used:,}")
@@ -337,27 +339,35 @@ def main():
                 console.print(f"[bold {p}]╰──────────────────────────────╯[/bold {p}]")
                 console.print(f"\n[bold green]✔[/bold green] [white]Aerion-X session saved. Goodbye![/white]\n")
                 break
-            if user_input.lower() == "clear":
+
+            elif cmd == "clear" or cmd == "/clear":
                 print_banner()
                 continue
-                
-            if user_input.lower() in ["/help", "help"]:
+
+            elif cmd in ["/help", "help"]:
                 from rich.table import Table
                 from rich.panel import Panel
                 table = Table(box=None, show_header=False, expand=True)
-                table.add_column("Command", style=f"bold {p}", width=15)
+                table.add_column("Command", style=f"bold {p}", width=18)
                 table.add_column("Description", style="white")
-                table.add_row("/help", "Show this help menu")
+                table.add_row("/help", "Show this command directory")
+                table.add_row("/conf", "Configure your API Key and endpoint URLs")
                 table.add_row("/theme <name>", f"Switch visual aesthetics ({', '.join(THEMES.keys())})")
                 table.add_row("/model <name>", "Swap out the underlying LLM engine")
                 table.add_row("/cd <path>", "Navigate the filesystem (Workspace scope)")
+                table.add_row("/btw <msg>", "Inject background context without triggering the AI immediately")
+                table.add_row("/history", "View the current session's message history log")
+                table.add_row("/export <file>", "Export the current session to a Markdown file")
+                table.add_row("/rollback", "Undo the last prompt and AI response")
                 table.add_row("/summary", "View deep analytics on the current session")
+                table.add_row("/system", "View target device hardware specifications")
+                table.add_row("/tokens", "View live token burn metrics")
                 table.add_row("clear", "Wipe terminal and reset the HUD")
                 table.add_row("exit", "Terminate connection to BrahMos Cloud")
                 console.print(Panel(table, title=f"[bold {p}]COMMAND DIRECTORY[/bold {p}]", title_align="left", border_style=p))
                 continue
 
-            if user_input.lower().startswith("/theme"):
+            elif cmd == "/theme":
                 parts = user_input.split(" ", 1)
                 if len(parts) > 1 and set_theme(parts[1].strip().lower()):
                     console.print(f"[bold green]✔[/bold green] Theme: {parts[1].strip()}")
@@ -366,11 +376,11 @@ def main():
                     console.print(f"Available themes: {', '.join(THEMES.keys())}")
                 continue
 
-            if user_input.lower() in ["/summary", "summary"]:
+            elif cmd in ["/summary", "summary"]:
                 console.print(Panel(f"[bold {p}]Summary[/bold {p}]\n\nID: {current_session_id}\nCWD: {current_working_dir}\nMessages: {len(messages)}\nModel: {config.MODEL_NAME}", border_style=p))
                 continue
 
-            if user_input.lower().startswith("/model"):
+            elif cmd == "/model":
                 parts = user_input.split(" ", 1)
                 if len(parts) > 1:
                     new_model = parts[1].strip()
@@ -382,7 +392,71 @@ def main():
                     console.print("[dim]Available models in config: " + ", ".join(config.AVAILABLE_MODELS["free"] + config.AVAILABLE_MODELS["paid"]) + "[/dim]")
                 continue
 
-            if not user_input.strip(): continue
+            elif cmd == "/cd":
+                parts = user_input.split(" ", 1)
+                if len(parts) > 1:
+                    res = change_directory(parts[1].strip())
+                    console.print(f"[bold {p}]>[/bold {p}] {res}")
+                else:
+                    console.print(f"[bold {p}]>[/bold {p}] Current directory: {current_working_dir}")
+                continue
+
+            elif cmd == "/conf":
+                console.print(f"[bold {p}]╭─ Configuration Menu ───────────╮[/bold {p}]")
+                new_key = console.input(f"[bold {p}]│[/bold {p}] [white]New API Key (leave blank to skip):[/white] ").strip()
+                if new_key:
+                    config.MODEL_API_KEY = new_key
+                    with open(config.GLOBAL_ENV_FILE, "a") as f: f.write(f"\nMODEL_API_KEY={new_key}\n")
+                    console.print(f"[bold {p}]│[/bold {p}] [bold green]✔ API Key Updated![/bold green]")
+                console.print(f"[bold {p}]╰──────────────────────────────╯[/bold {p}]")
+                continue
+
+            elif cmd == "/btw":
+                parts = user_input.split(" ", 1)
+                if len(parts) > 1:
+                    messages.append({"role": "user", "content": f"[BACKGROUND CONTEXT INJECTED]: {parts[1].strip()}"})
+                    console.print(f"[bold green]✔[/bold green] Context appended silently. It will be sent with your next prompt.")
+                else:
+                    console.print("[dim]Usage: /btw <your background context>[/dim]")
+                continue
+
+            elif cmd == "/history":
+                for i, m in enumerate(messages):
+                    if m["role"] == "user":
+                        console.print(f"[bold {p}]User:[/bold {p}] {str(m['content'])[:100]}...")
+                    elif m["role"] == "assistant":
+                        console.print(f"[bold {s}]Agent:[/bold {s}] {str(m.get('content', ''))[:100]}...")
+                continue
+
+            elif cmd == "/export":
+                parts = user_input.split(" ", 1)
+                fname = parts[1].strip() if len(parts) > 1 else f"export_{current_session_id}.md"
+                with open(os.path.join(current_working_dir, fname), "w") as f:
+                    for m in messages:
+                        f.write(f"### {m['role'].upper()}\n{m.get('content', '')}\n\n")
+                console.print(f"[bold green]✔[/bold green] Session exported to {os.path.join(current_working_dir, fname)}")
+                continue
+
+            elif cmd == "/rollback":
+                if len(messages) > 1:
+                    messages.pop() # remove last AI or tool
+                    console.print(f"[bold yellow]↺ Rolled back last interaction.[/bold yellow]")
+                else:
+                    console.print("[red]Nothing to rollback.[/red]")
+                continue
+
+            elif cmd == "/system":
+                console.print(Panel(os_info, title=f"[bold {p}]System Hardware[/bold {p}]", border_style=p))
+                continue
+
+            elif cmd == "/tokens":
+                console.print(f"[bold {p}]Token Burn:[/bold {p}] {total_tokens_used:,} tokens used in this session.")
+                continue
+
+            if not user_input.strip() or user_input.startswith("/"):
+                if user_input.startswith("/") and cmd not in ["/exit", "/clear", "/help", "/theme", "/summary", "/model", "/cd", "/conf", "/btw", "/history", "/export", "/rollback", "/system", "/tokens"]:
+                    console.print(f"[red]Unknown command: {cmd}[/red]")
+                continue
             
             # --- 3-AGENT AUTONOMOUS LOOP ---
             messages.append({"role": "user", "content": user_input})
