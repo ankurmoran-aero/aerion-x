@@ -84,7 +84,7 @@ def print_banner():
     )
     console.print(panel)
 
-def log_aerocity(msg, title="Aerocity AI"):
+def log_aerion-x(msg, title="Aerion-X AI"):
     if not msg:
         return
     p = current_theme["primary"]
@@ -189,14 +189,14 @@ total_tokens_used = 0
 total_tools_executed = 0
 
 # --- API Interaction ---
-def get_aerocity_response(messages, use_tools=True):
+def get_aerion-x_response(messages, use_tools=True):
     global total_tokens_used
     messages = trim_messages(messages)
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {MODEL_API_KEY}",
-        "HTTP-Referer": "https://github.com/ankurmoran-aero/aerocity",
-        "X-Title": "Aerocity"
+        "HTTP-Referer": "https://github.com/ankurmoran-aero/aerion-x",
+        "X-Title": "Aerion-X"
     }
 
     payload = {"model": MODEL_NAME, "messages": messages, "temperature": 0.2}
@@ -228,9 +228,9 @@ def get_aerocity_response(messages, use_tools=True):
             
         return data["choices"][0]["message"]
     except Exception as e:
-        return {"role": "assistant", "content": f"Aerocity API Error: {str(e)}"}
+        return {"role": "assistant", "content": f"Aerion-X API Error: {str(e)}"}
 
-SESSION_DIR = os.path.expanduser("~/.aerocity/sessions")
+SESSION_DIR = os.path.expanduser("~/.aerion-x/sessions")
 
 def list_sessions():
     if not os.path.exists(SESSION_DIR): return []
@@ -257,7 +257,7 @@ def main():
     import sys
     if not config.MODEL_API_KEY:
         print_banner()
-        console.print("[bold yellow]Welcome to Aerocity CLI![/bold yellow]")
+        console.print("[bold yellow]Welcome to Aerion-X CLI![/bold yellow]")
         console.print("[white]To get started, please provide your API Key (e.g., from OpenRouter, OpenAI, or GPTNix).[/white]")
         try:
             api_key = input("API Key: ").strip()
@@ -265,15 +265,15 @@ def main():
             api_key = ""
             
         if not api_key:
-            console.print("[bold red]Error: API Key is required to run Aerocity.[/bold red]")
+            console.print("[bold red]Error: API Key is required to run Aerion-X.[/bold red]")
             sys.exit(1)
         
-        os.makedirs(config.AEROCITY_DIR, exist_ok=True)
+        os.makedirs(config.AERION-X_DIR, exist_ok=True)
         with open(config.GLOBAL_ENV_FILE, "a") as f:
             f.write(f"\nMODEL_API_KEY={api_key}\n")
             
         config.MODEL_API_KEY = api_key
-        console.print("[bold green]API Key saved successfully! You can update it later in ~/.aerocity/.env[/bold green]\n")
+        console.print("[bold green]API Key saved successfully! You can update it later in ~/.aerion-x/.env[/bold green]\n")
     
     print_banner()
     p = current_theme["primary"]
@@ -314,7 +314,7 @@ def main():
                 console.print(f"[bold {p}]│[/bold {p}] [white]Tools Executed:[/white] {total_tools_executed}")
                 console.print(f"[bold {p}]│[/bold {p}] [white]Session ID:[/white] {current_session_id}")
                 console.print(f"[bold {p}]╰──────────────────────────────╯[/bold {p}]")
-                console.print(f"\n[bold green]✔[/bold green] [white]Aerocity session saved. Goodbye![/white]\n")
+                console.print(f"\n[bold green]✔[/bold green] [white]Aerion-X session saved. Goodbye![/white]\n")
                 break
             if user_input.lower() == "clear":
                 print_banner()
@@ -322,7 +322,7 @@ def main():
                 
             if user_input.lower() in ["/help", "help"]:
                 from rich.table import Table
-                table = Table(title="Aerocity Commands", border_style=p)
+                table = Table(title="Aerion-X Commands", border_style=p)
                 table.add_column("Command", style=p)
                 table.add_column("Description", style="white")
                 table.add_row("/help", "Show help")
@@ -331,7 +331,7 @@ def main():
                 table.add_row("/cd [path]", "Change directory")
                 table.add_row("/summary", "Session summary")
                 table.add_row("clear", "Clear screen")
-                table.add_row("exit", "Exit Aerocity")
+                table.add_row("exit", "Exit Aerion-X")
                 console.print(table)
                 continue
 
@@ -356,11 +356,11 @@ def main():
             # 1. Thinker Phase
             with console.status(f"[bold {p}]Thinker Agent is planning...[/bold {p}]") as status:
                 thinker_messages = [{"role": "system", "content": THINKER_PROMPT}] + messages
-                thinker_response = get_aerocity_response(thinker_messages, use_tools=False)
+                thinker_response = get_aerion-x_response(thinker_messages, use_tools=False)
                 plan_content = thinker_response.get("content", "")
                 
                 status.stop()
-                log_aerocity(plan_content, title="Thinker Agent")
+                log_aerion-x(plan_content, title="Thinker Agent")
                 status.start()
                 
                 messages.append({"role": "assistant", "content": f"[Thinker Plan]:\n{plan_content}"})
@@ -375,13 +375,13 @@ def main():
                 
                 while coder_turns < max_coder_turns:
                     coder_turns += 1
-                    response = get_aerocity_response(coder_messages, use_tools=True)
+                    response = get_aerion-x_response(coder_messages, use_tools=True)
                     coder_messages.append(response)
                     messages.append(response)
                     
                     if response.get("content"):
                         status.stop()
-                        log_aerocity(response["content"], title="Coder Agent")
+                        log_aerion-x(response["content"], title="Coder Agent")
                         status.start()
                         
                     if "tool_calls" in response and response["tool_calls"]:
@@ -431,13 +431,13 @@ def main():
                     debugger_turns = 0
                     while debugger_turns < 10:
                         debugger_turns += 1
-                        response = get_aerocity_response(debugger_messages, use_tools=True)
+                        response = get_aerion-x_response(debugger_messages, use_tools=True)
                         debugger_messages.append(response)
                         messages.append(response)
                         
                         if response.get("content"):
                             status.stop()
-                            log_aerocity(response["content"], title="Watchdog Agent")
+                            log_aerion-x(response["content"], title="Watchdog Agent")
                             status.start()
                             
                         if "tool_calls" in response and response["tool_calls"]:

@@ -5,7 +5,7 @@ from rich.console import Console
 
 console = Console()
 
-def run_shell(command, cli_name="Aerocity", cwd="Workspace", auto_approve=False):
+def run_shell(command, cli_name="Aerion-X", cwd="Workspace", auto_approve=False):
     """Executes a shell command. If auto_approve is True, skips the confirmation prompt."""
     if not auto_approve:
         console.print(f"\n[bold yellow]\\[!] {cli_name} wants to execute:[/bold yellow] [white]{command}[/white]")

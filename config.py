@@ -4,15 +4,15 @@ from dotenv import load_dotenv
 # Load environment variables from local .env file
 load_dotenv()
 
-# Try loading from global ~/.aerocity/.env
-AEROCITY_DIR = os.path.expanduser("~/.aerocity")
-GLOBAL_ENV_FILE = os.path.join(AEROCITY_DIR, ".env")
+# Try loading from global ~/.aerion-x/.env
+AERION-X_DIR = os.path.expanduser("~/.aerion-x")
+GLOBAL_ENV_FILE = os.path.join(AERION-X_DIR, ".env")
 if not os.getenv("MODEL_API_KEY") and os.path.exists(GLOBAL_ENV_FILE):
     load_dotenv(GLOBAL_ENV_FILE)
 
-# Aerocity Universal CLI Configuration
+# Aerion-X Universal CLI Configuration
 # Developer: @Ankxrrrr
-# Support: @AerocityAI
+# Support: @Aerion-XAI
 
 # Model / API
 MODEL_API_URL = os.getenv("MODEL_API_URL", "https://openrouter.ai/api/v1/chat/completions")
@@ -37,7 +37,7 @@ MODEL_API_KEY = os.getenv("MODEL_API_KEY")
 # ===============================
 
 # Branding
-CLI_NAME = "Aerocity"
+CLI_NAME = "Aerion-X"
 DEVELOPER = "Ankur Moran"
 VERSION = "v5.0.0-AUTO"
 
