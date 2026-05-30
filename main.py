@@ -132,7 +132,7 @@ def print_banner():
         f"[{s}]Version:[/{s}] [bold white]v6.0.0-PRO[/bold white]"
     )
     table.add_row(
-        f"[{p}]Network:[/{p}] [white]BrahMos Cloud[/white]",
+        f"[{p}]Network:[/{p}] [white]Aerion-X Net[/white]",
         f"[{s}]Engine:[/{s}] [bold white]{MODEL_NAME}[/bold white]"
     )
     
@@ -495,7 +495,7 @@ def main():
                 table.add_row("/system", "View target device hardware specifications")
                 table.add_row("/tokens", "View live token burn metrics")
                 table.add_row("clear", "Wipe terminal and reset the HUD")
-                table.add_row("exit", "Terminate connection to BrahMos Cloud")
+                table.add_row("exit", "Terminate connection to Aerion-X")
                 console.print(Panel(table, title=f"[bold {p}]COMMAND DIRECTORY[/bold {p}]", title_align="left", border_style=p))
                 continue
 
@@ -609,7 +609,7 @@ def main():
             p = current_theme["primary"]
             s = current_theme["secondary"]
             
-            logo = f"[bold {p}]A E R I O N - X   D A S H B O A R D[/bold {p}]\n[white]BrahMos Cloud v6.0.0-PRO[/white]"
+            logo = f"[bold {p}]A E R I O N - X   D A S H B O A R D[/bold {p}]\n[white]Aerion-X Net v6.0.0-PRO[/white]"
             layout["header"].update(Panel(Align.center(logo), style=p))
             layout["footer"].update(Panel(f"Status: Executing... | Tokens: {total_tokens_used}", style="dim"))
             
