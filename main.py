@@ -6,6 +6,32 @@ import platform
 import shutil
 from datetime import datetime
 
+# --- Auto-Update System ---
+def check_for_updates():
+    try:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        if not os.path.exists(os.path.join(script_dir, ".git")):
+            return
+            
+        if os.environ.get("AERION_SKIP_UPDATE"):
+            return
+
+        print("[*] Checking for Aerion-X updates...")
+        subprocess.run(["git", "fetch"], cwd=script_dir, capture_output=True, check=True)
+        status = subprocess.run(["git", "status", "-uno"], cwd=script_dir, capture_output=True, text=True).stdout
+        
+        if "Your branch is behind" in status:
+            print("[*] Update found. Downloading latest version...")
+            subprocess.run(["git", "pull"], cwd=script_dir, capture_output=True, check=True)
+            print("[*] Update successful. Restarting Aerion-X...\n")
+            
+            os.environ["AERION_SKIP_UPDATE"] = "1"
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+    except Exception as e:
+        pass # Silently fail if git update doesn't work (e.g., offline)
+
+check_for_updates()
+
 # --- Auto-Install Dependencies ---
 def ensure_dependencies():
     required = ["colorama", "requests", "beautifulsoup4", "googlesearch-python", "rich", "python-dotenv"]
@@ -28,6 +54,9 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.status import Status
+from rich.layout import Layout
+from rich.live import Live
+from rich.align import Align
 console = Console()
 
 # Import modular tools
@@ -89,8 +118,9 @@ def print_banner():
         f"[{s}]Engine:[/{s}] [bold white]{MODEL_NAME}[/bold white]"
     )
     
+    from rich.console import Group
     panel = Panel(
-        Align.center(logo) + "\n" + table,
+        Group(Align.center(logo), "", table),
         border_style=p,
         expand=True,
         title=f"[bold {s}]A E R I O N - X[/bold {s}]",
@@ -210,7 +240,7 @@ total_tokens_used = 0
 total_tools_executed = 0
 
 # --- API Interaction ---
-def get_aerion_x_response(messages, use_tools=True):
+def get_aerion_x_response(messages, use_tools=True, stream_callback=None):
     global total_tokens_used
     messages = trim_messages(messages)
     headers = {
@@ -238,18 +268,77 @@ def get_aerion_x_response(messages, use_tools=True):
         payload["tools"] = tools_config
         payload["tool_choice"] = "auto"
     
+    if stream_callback:
+        payload["stream"] = True
+
     try:
-        resp = requests.post(MODEL_API_URL, headers=headers, json=payload, timeout=60)
+        resp = requests.post(MODEL_API_URL, headers=headers, json=payload, timeout=60, stream=bool(stream_callback))
         resp.raise_for_status()
-        data = resp.json()
         
-        # Track Token Usage
-        if "usage" in data:
-            total_tokens_used += data["usage"].get("total_tokens", 0)
+        if stream_callback:
+            full_content = ""
+            tool_calls = {}
+            for line in resp.iter_lines():
+                if line:
+                    line = line.decode('utf-8')
+                    if line.startswith("data: "):
+                        data_str = line[6:]
+                        if data_str == "[DONE]": break
+                        try:
+                            chunk = json.loads(data_str)
+                            if "choices" in chunk and chunk["choices"]:
+                                delta = chunk["choices"][0].get("delta", {})
+                                if "content" in delta and delta["content"]:
+                                    full_content += delta["content"]
+                                    stream_callback(delta["content"], full_content)
+                                
+                                if "tool_calls" in delta:
+                                    for tc in delta["tool_calls"]:
+                                        idx = tc.get("index")
+                                        if idx not in tool_calls:
+                                            tool_calls[idx] = {"id": tc.get("id"), "type": "function", "function": {"name": "", "arguments": ""}}
+                                        if "function" in tc:
+                                            if "name" in tc["function"] and tc["function"]["name"]:
+                                                tool_calls[idx]["function"]["name"] += tc["function"]["name"]
+                                            if "arguments" in tc["function"] and tc["function"]["arguments"]:
+                                                tool_calls[idx]["function"]["arguments"] += tc["function"]["arguments"]
+                        except json.JSONDecodeError:
+                            pass
             
-        return data["choices"][0]["message"]
+            # Assemble final message
+            final_message = {"role": "assistant"}
+            if full_content:
+                final_message["content"] = full_content
+            if tool_calls:
+                final_message["tool_calls"] = list(tool_calls.values())
+            
+            total_tokens_used += int(len(full_content) / 4) # Approximation
+            return final_message
+        else:
+            data = resp.json()
+            if "usage" in data:
+                total_tokens_used += data["usage"].get("total_tokens", 0)
+            return data["choices"][0]["message"]
     except Exception as e:
         return {"role": "assistant", "content": f"Aerion-X API Error: {str(e)}"}
+
+def generate_layout():
+    layout = Layout(name="root")
+    layout.split(
+        Layout(name="header", size=6),
+        Layout(name="main", ratio=1),
+        Layout(name="footer", size=3)
+    )
+    layout["main"].split_row(
+        Layout(name="chat", ratio=2),
+        Layout(name="agents", ratio=1)
+    )
+    layout["agents"].split_column(
+        Layout(name="thinker", ratio=1),
+        Layout(name="coder", ratio=1),
+        Layout(name="watchdog", ratio=1)
+    )
+    return layout
 
 SESSION_DIR = os.path.expanduser("~/.aerion-x/sessions")
 
@@ -346,7 +435,6 @@ def main():
 
             elif cmd in ["/help", "help"]:
                 from rich.table import Table
-                from rich.panel import Panel
                 table = Table(box=None, show_header=False, expand=True)
                 table.add_column("Command", style=f"bold {p}", width=18)
                 table.add_column("Description", style="white")
@@ -461,37 +549,57 @@ def main():
             # --- 3-AGENT AUTONOMOUS LOOP ---
             messages.append({"role": "user", "content": user_input})
             
-            # 1. Thinker Phase
-            with console.status(f"[bold {p}]Thinker Agent is mapping neural pathways...[/bold {p}]", spinner="bouncingBar", spinner_style=p) as status:
-                thinker_messages = [{"role": "system", "content": THINKER_PROMPT}] + messages
-                thinker_response = get_aerion_x_response(thinker_messages, use_tools=False)
-                plan_content = thinker_response.get("content", "")
-                
-                status.stop()
-                log_aerion_x(plan_content, title="Thinker Agent")
-                status.start()
-                
-                messages.append({"role": "assistant", "content": f"[Thinker Plan]:\n{plan_content}"})
+            layout = generate_layout()
+            p = current_theme["primary"]
+            s = current_theme["secondary"]
             
-            # 2. Coder Phase
-            with console.status(f"[bold {p}]Coder Agent is executing directives...[/bold {p}]", spinner="aesthetic", spinner_style=p) as status:
-                coder_messages = [{"role": "system", "content": CODER_PROMPT}] + messages
+            logo = f"[bold {p}]A E R I O N - X   D A S H B O A R D[/bold {p}]\n[white]BrahMos Cloud v6.0.0-PRO[/white]"
+            layout["header"].update(Panel(Align.center(logo), style=p))
+            layout["footer"].update(Panel(f"Status: Executing... | Tokens: {total_tokens_used}", style="dim"))
+            
+            chat_history_str = ""
+            for m in messages[-6:]:
+                role = "User" if m["role"] == "user" else "Agent"
+                c = m.get('content') or '<Tool Call/Result>'
+                chat_history_str += f"**{role}**: {c}\n\n"
+            
+            layout["chat"].update(Panel(Markdown(chat_history_str), title=f"[bold {p}]Terminal / History[/bold {p}]", border_style=p))
+            
+            layout["thinker"].update(Panel("Idle", title=f"[bold {p}]Thinker[/bold {p}]", border_style=p))
+            layout["coder"].update(Panel("Idle", title=f"[bold {s}]Coder[/bold {s}]", border_style=s))
+            layout["watchdog"].update(Panel("Idle", title=f"[bold red]Watchdog[/bold red]", border_style="red"))
+            
+            with Live(layout, refresh_per_second=15, screen=True) as live:
+                # 1. Thinker Phase
+                layout["thinker"].update(Panel("[bold yellow]Thinking...[/bold yellow]", title=f"[bold {p}]Thinker[/bold {p}]", border_style=p))
+                thinker_messages = [{"role": "system", "content": THINKER_PROMPT}] + messages
                 
+                def thinker_stream(chunk, full):
+                    layout["thinker"].update(Panel(Markdown(full), title=f"[bold {p}]Thinker[/bold {p}]", border_style=p))
+                    layout["footer"].update(Panel(f"Status: Thinker Processing | Tokens: {total_tokens_used}", style="dim"))
+                
+                thinker_response = get_aerion_x_response(thinker_messages, use_tools=False, stream_callback=thinker_stream)
+                plan_content = thinker_response.get("content", "")
+                messages.append({"role": "assistant", "content": f"[Thinker Plan]:\n{plan_content}"})
+                
+                # 2. Coder Phase
+                coder_messages = [{"role": "system", "content": CODER_PROMPT}] + messages
                 coder_turns = 0
                 max_coder_turns = 15
                 fail_count = 0
                 
                 while coder_turns < max_coder_turns:
                     coder_turns += 1
-                    response = get_aerion_x_response(coder_messages, use_tools=True)
+                    layout["coder"].update(Panel("[bold yellow]Executing...[/bold yellow]", title=f"[bold {s}]Coder (Turn {coder_turns})[/bold {s}]", border_style=s))
+                    
+                    def coder_stream(chunk, full):
+                        layout["coder"].update(Panel(Markdown(full), title=f"[bold {s}]Coder (Turn {coder_turns})[/bold {s}]", border_style=s))
+                        layout["footer"].update(Panel(f"Status: Coder Generating | Tokens: {total_tokens_used}", style="dim"))
+                        
+                    response = get_aerion_x_response(coder_messages, use_tools=True, stream_callback=coder_stream)
                     coder_messages.append(response)
                     messages.append(response)
                     
-                    if response.get("content"):
-                        status.stop()
-                        log_aerion_x(response["content"], title="Coder Agent")
-                        status.start()
-                        
                     if "tool_calls" in response and response["tool_calls"]:
                         for tc in response["tool_calls"]:
                             func = tc["function"]["name"]
@@ -500,12 +608,9 @@ def main():
                             except:
                                 args = {}
                                 
-                            status.stop(); log_tool(f"Coder running {func}..."); 
-                            
-                            # Track tool execution
+                            layout["coder"].update(Panel(f"⚙️ Running Tool: [bold]{func}[/bold]...", title=f"[bold {s}]Coder Tool Execute[/bold {s}]", border_style=s))
                             total_tools_executed += 1
                             
-                            # Execute Tool
                             try:
                                 res = TOOLS[func](**args)
                             except Exception as e:
@@ -514,40 +619,32 @@ def main():
                             tool_msg = {"role": "tool", "tool_call_id": tc["id"], "name": func, "content": str(res)}
                             coder_messages.append(tool_msg)
                             messages.append(tool_msg)
-                            status.start()
                             
-                            # Check if the shell command failed
                             if func == "run_shell" and ("Error" in str(res) or "Exception" in str(res) or "failed" in str(res).lower()):
                                 fail_count += 1
-                                status.stop()
-                                log_error(f"Execution failed! (Attempt {fail_count}/5)")
-                                status.start()
                                 
                         if fail_count >= 5:
-                            status.stop()
-                            log_error("Coder Agent failed 5 times! Waking up Watchdog Agent...")
-                            status.start()
-                            break # Break coder loop, trigger debugger
+                            break
                         continue
-                    break # Coder finished successfully
-            
-            # 3. Watchdog Phase
-            if fail_count >= 5:
-                with console.status(f"[bold {p}]Watchdog Agent is reverse-engineering failures...[/bold {p}]", spinner="grenade", spinner_style=p) as status:
+                    break # Coder done
+                
+                # 3. Watchdog Phase
+                if fail_count >= 5:
+                    layout["watchdog"].update(Panel("[bold yellow]Debugging...[/bold yellow]", title="[bold red]Watchdog[/bold red]", border_style="red"))
                     debugger_messages = [{"role": "system", "content": DEBUGGER_PROMPT}] + messages
                     
                     debugger_turns = 0
                     while debugger_turns < 10:
                         debugger_turns += 1
-                        response = get_aerion_x_response(debugger_messages, use_tools=True)
+                        
+                        def watchdog_stream(chunk, full):
+                            layout["watchdog"].update(Panel(Markdown(full), title=f"[bold red]Watchdog (Turn {debugger_turns})[/bold red]", border_style="red"))
+                            layout["footer"].update(Panel(f"Status: Watchdog Analyzing | Tokens: {total_tokens_used}", style="dim"))
+                            
+                        response = get_aerion_x_response(debugger_messages, use_tools=True, stream_callback=watchdog_stream)
                         debugger_messages.append(response)
                         messages.append(response)
                         
-                        if response.get("content"):
-                            status.stop()
-                            log_aerion_x(response["content"], title="Watchdog Agent")
-                            status.start()
-                            
                         if "tool_calls" in response and response["tool_calls"]:
                             for tc in response["tool_calls"]:
                                 func = tc["function"]["name"]
@@ -556,9 +653,7 @@ def main():
                                 except:
                                     args = {}
                                     
-                                status.stop(); log_tool(f"Watchdog running {func}..."); 
-                                
-                                # Track tool execution
+                                layout["watchdog"].update(Panel(f"⚙️ Running Tool: [bold]{func}[/bold]...", title="[bold red]Watchdog Tool Execute[/bold red]", border_style="red"))
                                 total_tools_executed += 1
                                 
                                 try:
@@ -569,10 +664,18 @@ def main():
                                 tool_msg = {"role": "tool", "tool_call_id": tc["id"], "name": func, "content": str(res)}
                                 debugger_messages.append(tool_msg)
                                 messages.append(tool_msg)
-                                status.start()
                             continue
-                        break # Debugger finished
+                        break # Debugger done
             
+            final_content = ""
+            for m in reversed(messages):
+                if m["role"] == "assistant" and "tool_calls" not in m:
+                    final_content = m.get("content", "")
+                    break
+            
+            if final_content:
+                console.print(Panel(Markdown(final_content), title=f"[bold {p}]Agent Response[/bold {p}]", border_style=p))
+                
             save_session(current_session_id, messages)
         except KeyboardInterrupt: 
             console.print("\n[bold red]Operation cancelled.[/bold red]")

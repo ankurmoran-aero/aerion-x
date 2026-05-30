@@ -15,8 +15,8 @@ if not os.getenv("MODEL_API_KEY") and os.path.exists(GLOBAL_ENV_FILE):
 # Support: @Aerion-XAI
 
 # Model / API
-MODEL_API_URL = os.getenv("MODEL_API_URL", "https://openrouter.ai/api/v1/chat/completions")
-MODEL_NAME = os.getenv("MODEL_NAME", "anthropic/claude-3.5-sonnet")
+MODEL_API_URL = os.getenv("MODEL_API_URL", "https://api.gptnix.online/v1/chat/completions")
+MODEL_NAME = os.getenv("MODEL_NAME", "zenith/gpt-4o")
 
 # Available Models (Free & Paid Tiers)
 AVAILABLE_MODELS = {
