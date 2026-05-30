@@ -62,36 +62,57 @@ def set_theme(name):
 # --- UI Helpers ---
 def print_banner():
     os.system('clear' if os.name == 'posix' else 'cls')
+    from rich.table import Table
+    from rich.align import Align
     p = current_theme["primary"]
+    s = current_theme["secondary"]
     
     logo = f"[bold {p}]" + """
-██████╗ ██████╗  █████╗ ██╗  ██╗███╗   ███╗ ██████╗ ███████╗
-██╔══██╗██╔══██╗██╔══██╗██║  ██║████╗ ████║██╔═══██╗██╔════╝
-██████╔╝██████╔╝███████║███████║██╔████╔██║██║   ██║███████╗
-██╔══██╗██╔══██╗██╔══██║██╔══██║██║╚██╔╝██║██║   ██║╚════██║
-██████╔╝██║  ██║██║  ██║██║  ██║██║ ╚═╝ ██║╚██████╔╝███████║
-╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝ ╚══════╝
+ ⬡ █████╗ ███████╗██████╗ ██╗ ██████╗ ███╗   ██╗     ██╗  ██╗ ⬡
+  ██╔══██╗██╔════╝██╔══██╗██║██╔═══██╗████╗  ██║     ╚██╗██╔╝  
+  ███████║█████╗  ██████╔╝██║██║   ██║██╔██╗ ██║█████╗╚███╔╝   
+  ██╔══██║██╔══╝  ██╔══██╗██║██║   ██║██║╚██╗██║╚════╝██╔██╗   
+  ██║  ██║███████╗██║  ██║██║╚██████╔╝██║ ╚████║     ██╔╝ ██╗  
+  ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝     ╚═╝  ╚═╝  
 """ + f"[/bold {p}]"
     
-    credits_line = f" [white]Made By Ankur Moran[/white]  |  [{p}]TG:[/{p}] [white]@Ankxrrrr[/white]  |  [{p}]IG:[/{p}] [white]_ankurmoran_[/white] "
-    version_line = f" [dim]CLI Version: {VERSION}  |  Engine: {MODEL_NAME}[/dim]"
+    table = Table(show_header=False, expand=True, border_style=s, box=None)
+    table.add_column("Left", justify="left", ratio=1)
+    table.add_column("Right", justify="right", ratio=1)
+    
+    table.add_row(
+        f"[{p}]Architect:[/{p}] [white]Ankur Moran[/white]",
+        f"[{s}]Version:[/{s}] [bold white]v6.0.0-PRO[/bold white]"
+    )
+    table.add_row(
+        f"[{p}]Network:[/{p}] [white]BrahMos Cloud[/white]",
+        f"[{s}]Engine:[/{s}] [bold white]{MODEL_NAME}[/bold white]"
+    )
     
     panel = Panel(
-        f"{logo}\n{credits_line}\n{version_line}",
+        Align.center(logo) + "\n" + table,
         border_style=p,
-        expand=False,
-        padding=(1, 4)
+        expand=True,
+        title=f"[bold {s}]A E R I O N - X[/bold {s}]",
+        title_align="center"
     )
     console.print(panel)
 
 def log_aerion_x(msg, title="Aerion-X AI"):
     if not msg:
         return
+    import time
+    from rich.live import Live
     p = current_theme["primary"]
-    md = Markdown(msg, justify="left")
-    panel = Panel(md, title=f"[bold {p}]{title}[/bold {p}]", title_align="left", border_style=p, expand=True)
-    console.print()
-    console.print(panel)
+    
+    buffer = ""
+    # Smooth animated typewriter effect
+    with Live(Panel(Markdown(""), title=f"[bold {p}]{title}[/bold {p}]", title_align="left", border_style=p, expand=True), refresh_per_second=60) as live:
+        chunk_size = 4
+        for i in range(0, len(msg), chunk_size):
+            buffer += msg[i:i+chunk_size]
+            live.update(Panel(Markdown(buffer), title=f"[bold {p}]{title}[/bold {p}]", title_align="left", border_style=p, expand=True))
+            time.sleep(0.005)
     console.print()
 
 def log_tool(msg):
@@ -322,17 +343,18 @@ def main():
                 
             if user_input.lower() in ["/help", "help"]:
                 from rich.table import Table
-                table = Table(title="Aerion-X Commands", border_style=p)
-                table.add_column("Command", style=p)
+                from rich.panel import Panel
+                table = Table(box=None, show_header=False, expand=True)
+                table.add_column("Command", style=f"bold {p}", width=15)
                 table.add_column("Description", style="white")
-                table.add_row("/help", "Show help")
-                table.add_row("/theme [name]", f"Themes: {', '.join(THEMES.keys())}")
-                table.add_row("/model [name]", "Switch model")
-                table.add_row("/cd [path]", "Change directory")
-                table.add_row("/summary", "Session summary")
-                table.add_row("clear", "Clear screen")
-                table.add_row("exit", "Exit Aerion-X")
-                console.print(table)
+                table.add_row("/help", "Show this help menu")
+                table.add_row("/theme <name>", f"Switch visual aesthetics ({', '.join(THEMES.keys())})")
+                table.add_row("/model <name>", "Swap out the underlying LLM engine")
+                table.add_row("/cd <path>", "Navigate the filesystem (Workspace scope)")
+                table.add_row("/summary", "View deep analytics on the current session")
+                table.add_row("clear", "Wipe terminal and reset the HUD")
+                table.add_row("exit", "Terminate connection to BrahMos Cloud")
+                console.print(Panel(table, title=f"[bold {p}]COMMAND DIRECTORY[/bold {p}]", title_align="left", border_style=p))
                 continue
 
             if user_input.lower().startswith("/theme"):
@@ -366,7 +388,7 @@ def main():
             messages.append({"role": "user", "content": user_input})
             
             # 1. Thinker Phase
-            with console.status(f"[bold {p}]Thinker Agent is planning...[/bold {p}]") as status:
+            with console.status(f"[bold {p}]Thinker Agent is mapping neural pathways...[/bold {p}]", spinner="bouncingBar", spinner_style=p) as status:
                 thinker_messages = [{"role": "system", "content": THINKER_PROMPT}] + messages
                 thinker_response = get_aerion_x_response(thinker_messages, use_tools=False)
                 plan_content = thinker_response.get("content", "")
@@ -378,7 +400,7 @@ def main():
                 messages.append({"role": "assistant", "content": f"[Thinker Plan]:\n{plan_content}"})
             
             # 2. Coder Phase
-            with console.status(f"[bold {p}]Coder Agent is executing...[/bold {p}]") as status:
+            with console.status(f"[bold {p}]Coder Agent is executing directives...[/bold {p}]", spinner="aesthetic", spinner_style=p) as status:
                 coder_messages = [{"role": "system", "content": CODER_PROMPT}] + messages
                 
                 coder_turns = 0
@@ -437,7 +459,7 @@ def main():
             
             # 3. Watchdog Phase
             if fail_count >= 5:
-                with console.status(f"[bold {p}]Watchdog Agent is debugging...[/bold {p}]") as status:
+                with console.status(f"[bold {p}]Watchdog Agent is reverse-engineering failures...[/bold {p}]", spinner="grenade", spinner_style=p) as status:
                     debugger_messages = [{"role": "system", "content": DEBUGGER_PROMPT}] + messages
                     
                     debugger_turns = 0

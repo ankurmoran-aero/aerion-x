@@ -39,7 +39,7 @@ MODEL_API_KEY = os.getenv("MODEL_API_KEY")
 # Branding
 CLI_NAME = "Aerion-X"
 DEVELOPER = "Ankur Moran"
-VERSION = "v5.0.0-AUTO"
+VERSION = "v6.0.0-PRO"
 
 # The 3 Agents Framework Prompts
 
