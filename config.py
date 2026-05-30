@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Try loading from global ~/.aerion-x/.env
-AERION-X_DIR = os.path.expanduser("~/.aerion-x")
-GLOBAL_ENV_FILE = os.path.join(AERION-X_DIR, ".env")
+AERION_X_DIR = os.path.expanduser("~/.aerion-x")
+GLOBAL_ENV_FILE = os.path.join(AERION_X_DIR, ".env")
 if not os.getenv("MODEL_API_KEY") and os.path.exists(GLOBAL_ENV_FILE):
     load_dotenv(GLOBAL_ENV_FILE)
 
