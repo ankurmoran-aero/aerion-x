@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="aerion-x-core",
-    version="4.5.2",
+    version="4.5.3",
     author="@Ankxrrrr",
     description="The ultimate autonomous system orchestrator.",
     packages=find_packages(),
