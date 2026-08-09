@@ -1,48 +1,75 @@
-# ⚡ Aerion-X: The Autonomous AI Orchestrator
+# Aerion-X
 
-[![Development](https://img.shields.io/badge/Platform-Mobile-orange?style=flat-square&logo=android)](https://github.com/ankurmoran96-openai)
-[![Developer](https://img.shields.io/badge/Developer-14--Year--Old-blue?style=flat-square)](https://github.com/ankurmoran96-openai)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
+[![OpenRouter](https://img.shields.io/badge/AI-OpenRouter-6366f1?style=for-the-badge)](https://openrouter.ai)
+[![Status](https://img.shields.io/badge/Status-Active-22c55e?style=for-the-badge)]()
 
-**Aerion-X** is a sophisticated, autonomous terminal-based AI agent designed to bridge the gap between complex engineering tasks and mobile-first development environments. Built entirely on a mobile device by a 14-year-old developer, Aerion-X demonstrates the power of persistence and modern AI integration.
+**Aerion-X** is an autonomous, terminal-based AI agent that orchestrates complex engineering workflows through a unified, intelligent interface. It handles file operations, software architecture planning, terminal execution, and auto-dependency resolution — all within a rich, animated CLI experience.
 
-## 📖 The Story
-> *"Innovation isn't limited by the hardware you own, but by the code you write."*
+---
 
-Aerion-X was developed as a solution to the constraints of mobile coding. It allows developers to orchestrate complex file operations, plan software architectures, and execute terminal commands through a unified, intelligent interface—all optimized for a mobile-first workflow.
+## Features
 
-## ✨ Key Features
-*   **🧠 Architect Mode**: Collaborative brainstorming with GPT-4o to map out project blueprints before a single line of code is written.
-*   **🛡️ Autonomous Sandboxing**: Automatically creates and isolates all generated code into a secure `Workspace` directory.
-*   **🖥️ Integrated Shell**: A seamless `/shell` command to drop into an interactive terminal without losing AI context.
-*   **📦 Auto-Dependency Resolution**: Intelligent detection and installation of missing packages for Python and Node.js.
-*   **🎨 Rich Terminal UI**: Fully animated interface with Markdown parsing and syntax highlighting for a premium developer experience.
+- **Architect Mode** — Collaborative project blueprinting with GPT-4o / Claude before writing a single line of code
+- **Autonomous Sandboxing** — All generated code is isolated into a secure `Workspace` directory automatically
+- **Integrated Shell** — Drop into an interactive sub-shell with `/shell` without losing AI context
+- **Auto-Dependency Resolution** — Detects and installs missing Python/Node.js packages on the fly
+- **Rich Terminal UI** — Animated interface with Markdown rendering and syntax highlighting
 
-## 🚀 Installation
+---
+
+## Installation
 
 ```bash
 pip install git+https://github.com/ankurmoran-aero/aerion-x.git
 ```
 
-## 💻 Usage
+## Quick Start
 
-Once installed, simply run:
 ```bash
 aerion-x
 ```
 
-### Essential Commands
-*   `/cd <path>` - Navigate the AI's active workspace.
-*   `/shell` - Launch an interactive sub-shell.
-*   `clear` - Reset the terminal view.
-*   `exit` - Gracefully shutdown the agent.
+### Core Commands
 
-## 🛠 Tech Stack
-*   **Language**: Python 3.10+
-*   **AI Engine**: OpenRouter / GPT-4o / Claude-3.5-Sonnet
-*   **UI Framework**: `rich`, `prompt_toolkit`
-*   **Environment**: Termux (Android)
+| Command | Description |
+|---------|-------------|
+| `/cd <path>` | Navigate the AI's active workspace |
+| `/shell` | Launch an interactive sub-shell |
+| `clear` | Reset the terminal view |
+| `exit` | Gracefully shut down the agent |
 
 ---
-Developed with passion by **Ankur Moran**.
-[Telegram](https://t.me/Ankxrrrr) | [Instagram](https://instagram.com/_ankurmoran_)
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| Language | Python 3.10+ |
+| AI Engine | OpenRouter / GPT-4o / Claude-3.5-Sonnet |
+| UI Framework | `rich`, `prompt_toolkit` |
+
+---
+
+## Project Structure
+
+```
+aerion-x/
+├── main.py              # Entry point & agent loop
+├── config.py            # Configuration & API keys
+├── tools/               # Modular tool implementations
+│   ├── file_tool.py     # File system operations
+│   ├── git_tool.py      # Git integration
+│   ├── shell_tool.py    # Shell execution
+│   ├── plan_tool.py     # Architecture planning
+│   └── web_tool.py      # Web requests
+├── requirements.txt
+└── setup.py
+```
+
+---
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
